@@ -469,9 +469,9 @@ if __name__ == "__main__":
 
     # Define the 3 values for the parameters you want to sweep
     # Example: Sweeping l_hat and eta
-    l_hat_sweep_values = [0.01, 0.02, 0.04]
-    eta_sweep_values   = [1e-3, 1e-2, 1e-1]
-    Lambda_values      = [1.0, 10.0, 20.0]
+    l_hat_sweep_values = [0.01, 0.02, 0.04, 0.1]
+    eta_sweep_values   = [1e-3, 1e-2, 5e-2, 1e-1]
+    Lambda_values      = [1.0, 10.0, 20.0, 50.0]
 
     # Generate all combinations of parameters
     sweep_combinations = list(itertools.product(l_hat_sweep_values, eta_sweep_values, Lambda_values))
