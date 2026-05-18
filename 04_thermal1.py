@@ -11,7 +11,7 @@ from mpi4py import MPI
 from petsc4py import PETSc
 comm = MPI.COMM_WORLD
 
-# SNESProblems helper functions
+# SNESProblems helper function
 class SNESProblem:
     def __init__(self, F, u, bcs, J=None):
         V = u.function_space
