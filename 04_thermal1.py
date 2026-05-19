@@ -436,21 +436,29 @@ def run_simulation(model_parameters, mesh_parameters, loading_parameters, AltMin
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_dir = os.path.join(script_dir, "Output")
-        os.makedirs(output_dir, exist_ok=True)
+        
+        # --- MODIFIED SECTION ---
+        # Create separate directories for png and pdf files
+        png_dir = os.path.join(output_dir, "png")
+        pdf_dir = os.path.join(output_dir, "pdf")
+        os.makedirs(png_dir, exist_ok=True)
+        os.makedirs(pdf_dir, exist_ok=True)
+
         filename_str = (
             f"thermal_lhat_{ell_val}_lam_{lambda_val}_eta_{eta_val}_"
             f"thmax_{theta_max_val:.2f}_nQS_{n_steps_qs}_nDyn_{n_steps_dyn}"
             f"_nMesh_{mesh_val}_T0_{smoth_val}"
         )
-        png_path = os.path.join(output_dir, f"{filename_str}.png")
-        pdf_path = os.path.join(output_dir, f"{filename_str}.pdf")
+        png_path = os.path.join(png_dir, f"{filename_str}.png")
+        pdf_path = os.path.join(pdf_dir, f"{filename_str}.pdf")
         
         plt.savefig(png_path, dpi=300, bbox_inches="tight")
-        plt.savefig(pdf_path,            bbox_inches="tight")
+        plt.savefig(pdf_path, bbox_inches="tight")
+        # ------------------------
 
         print(f"Results saved to {output_dir}/")
-        print(f"  - {filename_str}.png")
-        print(f"  - {filename_str}.pdf")
+        print(f"  - PNG: {png_path}")
+        print(f"  - PDF: {pdf_path}")
 
         # Crucial for sweeps: close the figure to free up memory and prevent blocking
         plt.close(fig) 

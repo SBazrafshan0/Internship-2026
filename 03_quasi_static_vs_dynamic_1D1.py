@@ -429,7 +429,13 @@ def run_simulation(l_hat_val, lambda_val, eta_val):
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_dir = os.path.join(script_dir, "Output")
-        os.makedirs(output_dir, exist_ok=True)
+        
+        # --- MODIFIED SECTION ---
+        # Create separate directories for png and pdf files
+        png_dir = os.path.join(output_dir, "png")
+        pdf_dir = os.path.join(output_dir, "pdf")
+        os.makedirs(png_dir, exist_ok=True)
+        os.makedirs(pdf_dir, exist_ok=True)
 
         filename_str = (
             f"mechanical_lhat_{l_hat_val}_lam_{lambda_val}_eta_{eta_val}_"
@@ -437,16 +443,18 @@ def run_simulation(l_hat_val, lambda_val, eta_val):
             f"_nMesh_{mesh_val}_T0_{smoth_val}"
         )
 
-        png_path = os.path.join(output_dir, f"{filename_str}.png")
-        pdf_path = os.path.join(output_dir, f"{filename_str}.pdf")
+        png_path = os.path.join(png_dir, f"{filename_str}.png")
+        pdf_path = os.path.join(pdf_dir, f"{filename_str}.pdf")
         plt.savefig(png_path, dpi=300, bbox_inches="tight")
-        plt.savefig(pdf_path,            bbox_inches="tight")
+        plt.savefig(pdf_path, bbox_inches="tight")
+        # ------------------------
 
         # Crucial for parameter sweeping: close the figure to prevent execution halting
         plt.close(fig) 
         
         print(f"Results saved to {output_dir}/")
-        print(f"  - {filename_str}.png")
+        print(f"  - PNG: {png_path}")
+        print(f"  - PDF: {pdf_path}")
 
     # Clean up PETSc solvers to free memory during the sweep
     solver_u_qs.destroy()
