@@ -357,7 +357,7 @@ def run_simulation(model_parameters, mesh_parameters, loading_parameters, AltMin
     err_tot  = float(np.max(np.abs(qs["total"] - tot_dyn_at_qs)))
 
     if comm.rank == 0:
-        fig = plt.figure(figsize=(20, 10))
+        fig = plt.figure(figsize=(16, 9))
         gs  = fig.add_gridspec(2, 3, height_ratios=[1.0, 1.2], hspace=0.30, wspace=0.25)
         ax_force  = fig.add_subplot(gs[0, 0])
         ax_frag_qs = fig.add_subplot(gs[0, 1])
