@@ -46,31 +46,20 @@ class SNESProblem:
         J.assemble()
 
 
-def run_simulation(l_hat_val, lambda_val, eta_val):
+def run_simulation(model_parameters, mesh_parameters, loading_parameters, AltMin_parameters, Newmark_parameters):
     """
-    Runs the 1D phase-field damage model for a given set of parameters.
+    Runs the 1D phase-field damage model for a given set of configuration dictionaries.
     """
-    ## Parameters
-    model_parameters = {
-        "l_hat":  l_hat_val,
-        "Lambda": lambda_val,
-        "eta":    eta_val,
-    }
-
-    mesh_parameters = {"nx": 200}
-
-    loading_parameters = {
-        "U_max":        1.4,
-        "T0":           1.0,
-        "N_steps_qs":   20,
-        "N_steps_dyn":  60,
-    }
-
-    AltMin_parameters  = {"max_iter": 200, "tol": 1e-7}
-    Newmark_parameters = {"beta": 0.25, "gamma": 0.5}
+    # Extract model parameters for print statements and filenames
+    l_hat_val = model_parameters["l_hat"]
+    lambda_val = model_parameters["Lambda"]
+    eta_val = model_parameters["eta"]
+    
+    n_steps_qs = loading_parameters["N_steps_qs"]
+    n_steps_dyn = loading_parameters["N_steps_dyn"]
 
     if comm.rank == 0:
-        print(f"\n--- Starting run with l_hat={l_hat_val}, Lambda={lambda_val}, eta={eta_val} ---")
+        print(f"\n--- Starting run with l_hat={l_hat_val}, Lambda={lambda_val}, eta={eta_val} | QS_steps={n_steps_qs}, Dyn_steps={n_steps_dyn} ---")
 
     ## Mesh, spaces, surface tags
     domain = df_mesh.create_interval(comm, mesh_parameters["nx"], (0.0, 1.0))
@@ -380,10 +369,8 @@ def run_simulation(l_hat_val, lambda_val, eta_val):
         ax_energy = fig.add_subplot(gs[1, :])
 
         u_max_val   = float(np.max(qs["U"]))
-        n_steps_qs  = len(qs["U"])
-        n_steps_dyn = len(dyn["U"])
-        mesh_val      = mesh_parameters["nx"]
-        smoth_val     = loading_parameters["T0"]
+        mesh_val    = mesh_parameters["nx"]
+        smoth_val   = loading_parameters["T0"]
         
         header_text = (
             f"Model: $\\hat\\ell={l_hat_val}$ | $\\Lambda={lambda_val}$ | $\\eta={eta_val}$\n"
@@ -473,21 +460,56 @@ def run_simulation(l_hat_val, lambda_val, eta_val):
     solver_alpha_dyn.destroy()
 
 
+# =============================================================================
+# SWEEP EXECUTION (Matched to Screenshot Organization)
+# =============================================================================
 if __name__ == "__main__":
-    # Define your sweep grids (3 values each as requested)
-    l_hat_grid  = [0.01, 0.02, 0.04, 0.1]
-    Lambda_grid = [1.0, 10.0, 20.0, 50.0]
-    eta_grid    = [1e-3, 1e-2, 5e-2, 1e-1]
+    
+    # Base Configurations
+    base_mesh_parameters    = {"nx": 200}
+    base_loading_parameters = {"U_max": 1.4, "T0": 1.0}
+    base_AltMin_parameters  = {"max_iter": 500, "tol": 1e-7}
+    base_Newmark_parameters = {"beta": 0.25, "gamma": 0.5}
 
-    # Generate all combinations
-    parameter_combinations = list(itertools.product(l_hat_grid, Lambda_grid, eta_grid))
+    # Define the values for the parameters you want to sweep
+    l_hat_sweep_values  = [0.01, 0.02, 0.04, 0.1]
+    eta_sweep_values    = [1e-3, 1e-2, 5e-2, 1e-1]
+    Lambda_sweep_values = [1.0, 10.0, 20.0, 50.0]
+    
+    # New parameter for Dynamic Steps. 
+    # (The loop below will automatically set n_dyn_val = 3 * N_steps_qs)
+    n_qs_sweep_values  = [20, 40, 80]  # Corresponding to n_dyn = 60, 120, 240
+
+    # Generate all combinations of parameters
+    sweep_combinations = list(itertools.product(
+        l_hat_sweep_values, eta_sweep_values, Lambda_sweep_values, n_qs_sweep_values
+    ))
 
     if comm.rank == 0:
-        print(f"Initiating parameter sweep: {len(parameter_combinations)} total combinations to run.")
+        print(f"Initiating parameter sweep: {len(sweep_combinations)} total combinations to run.")
 
-    # Execute the sweep
-    for l_hat_val, lambda_val, eta_val in parameter_combinations:
-        run_simulation(l_hat_val, lambda_val, eta_val)
+    # Loop through each combination
+    for l_hat_val, eta_val, lambda_val, n_qs_val in sweep_combinations:
+        
+        current_model_parameters = {
+            "l_hat":  l_hat_val,
+            "eta":    eta_val,
+            "Lambda": lambda_val
+        }
+        
+        # Implement dynamic linking of steps (qs = 3 * dyn)
+        current_loading_parameters = base_loading_parameters.copy()
+        current_loading_parameters["N_steps_qs"] = n_qs_val
+        current_loading_parameters["N_steps_dyn"]  = 3 * n_qs_val 
+
+        # Execute the simulation run
+        run_simulation(
+            model_parameters=current_model_parameters,
+            mesh_parameters=base_mesh_parameters,
+            loading_parameters=current_loading_parameters,
+            AltMin_parameters=base_AltMin_parameters,
+            Newmark_parameters=base_Newmark_parameters
+        )
 
     if comm.rank == 0:
-        print("\n--- Parameter Sweep Complete! ---")
+        print("\n--- Parameter sweep fully completed. ---")
