@@ -478,7 +478,7 @@ if __name__ == "__main__":
     
     # New parameter for Dynamic Steps. 
     # (The loop below will automatically set n_dyn_val = 3 * N_steps_qs)
-    n_qs_sweep_values  = [20, 40, 80]  # Corresponding to n_dyn = 60, 120, 240
+    n_qs_sweep_values  = [20, 40, 60]  # Corresponding to n_dyn = 60, 120, 180
 
     # Generate all combinations of parameters
     sweep_combinations = list(itertools.product(

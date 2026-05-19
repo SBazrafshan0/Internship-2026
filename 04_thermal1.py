@@ -470,6 +470,12 @@ def run_simulation(model_parameters, mesh_parameters, loading_parameters, AltMin
         print(f"  - PDF: {pdf_path}")
 
         plt.close(fig) 
+        
+    # Clean up PETSc solvers to free memory during the sweep
+    solver_u_qs.destroy()
+    solver_alpha_qs.destroy()
+    solver_acc.destroy()
+    solver_alpha_dyn.destroy()
 
 
 # =============================================================================
@@ -479,21 +485,31 @@ if __name__ == "__main__":
     
     # Base Configurations
     base_mesh_parameters    = {"nx": 200}
-    base_loading_parameters = {"theta_max": 4.0, "T0": 1.0, "N_steps_qs": 30, "N_steps_dyn": 90, "N_snapshots": 6}
+    base_loading_parameters = {"theta_max": 4.0, "T0": 1.0, "N_snapshots": 6} # Removed default steps as they are handled in the sweep
     base_AltMin_parameters  = {"max_iter": 500, "tol": 1e-7}
     base_Newmark_parameters = {"beta": 0.25, "gamma": 0.5}
 
-    # Define the 3 values for the parameters you want to sweep
-    # Example: Sweeping l_hat and eta
+    # Define the values for the parameters you want to sweep
     l_hat_sweep_values = [0.01, 0.02, 0.04, 0.1]
     eta_sweep_values   = [1e-3, 1e-2, 5e-2, 1e-1]
     Lambda_values      = [1.0, 10.0, 20.0, 50.0]
+    
+    # New parameter for QS Steps. 
+    n_qs_sweep_values  = [20, 40, 60]
 
     # Generate all combinations of parameters
-    sweep_combinations = list(itertools.product(l_hat_sweep_values, eta_sweep_values, Lambda_values))
+    sweep_combinations = list(itertools.product(
+        l_hat_sweep_values, 
+        eta_sweep_values, 
+        Lambda_values, 
+        n_qs_sweep_values
+    ))
+    
+    if comm.rank == 0:
+        print(f"Initiating parameter sweep: {len(sweep_combinations)} total combinations to run.")
 
     # Loop through each combination
-    for l_hat_val, eta_val, lambda_val in sweep_combinations:
+    for l_hat_val, eta_val, lambda_val, n_qs_val in sweep_combinations:
         
         current_model_parameters = {
             "l_hat":  l_hat_val,
@@ -501,14 +517,19 @@ if __name__ == "__main__":
             "Lambda": lambda_val
         }
         
+        # Apply the rule: dyn = 3 * qs
+        current_loading_parameters = base_loading_parameters.copy()
+        current_loading_parameters["N_steps_qs"] = n_qs_val
+        current_loading_parameters["N_steps_dyn"] = 3 * n_qs_val
+        
         # Execute the simulation run
         run_simulation(
             model_parameters=current_model_parameters,
             mesh_parameters=base_mesh_parameters,
-            loading_parameters=base_loading_parameters,
+            loading_parameters=current_loading_parameters,
             AltMin_parameters=base_AltMin_parameters,
             Newmark_parameters=base_Newmark_parameters
         )
 
     if comm.rank == 0:
-        print("Parameter sweep fully completed.")
+        print("\n--- Parameter sweep fully completed. ---")
