@@ -379,24 +379,36 @@ def run_simulation(model_parameters, mesh_parameters, loading_parameters, AltMin
         )
         fig.suptitle(header_text, fontsize=13, fontweight="bold", y=0.97)
 
-        ax_force.plot(qs["theta"],  qs["sigma_bar"],  "k.-", label="QS")
-        ax_force.plot(dyn["theta"], dyn["sigma_bar"], "r-", label=r"dynamic", alpha=0.75)
-        ax_force.set_xlabel(r"$\theta(t)$"); ax_force.set_ylabel(r"mean stress $\bar\sigma$")
+        # --- MODIFIED: Force Plot (QS: dots, Dyn: crosses with faint lines) ---
+        ax_force.plot(qs["theta"], qs["sigma_bar"], color="black", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label="QS")
+        ax_force.plot(dyn["theta"], dyn["sigma_bar"], color="red", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label="dynamic")
+        
+        ax_force.set_xlabel(r"$\theta(t)$")
+        ax_force.set_ylabel(r"mean stress $\bar\sigma$")
         ax_force.set_title("Mean stress vs thermal strain")
-        ax_force.grid(True, alpha=0.3); ax_force.legend()
+        ax_force.grid(True, alpha=0.3)
+        ax_force.legend()
 
-        ax_energy.plot(dyn["theta"], dyn["K"],     "m-",  alpha=0.85,  label=r"$\hat K$ (dyn only)")
-        ax_energy.plot(qs["theta"],  qs["P_el"],   "b.",  markersize=5, label=r"$\hat P_{el}$ QS")
-        ax_energy.plot(dyn["theta"], dyn["P_el"],  "b-",  alpha=0.6,    label=r"$\hat P_{el}$ Dyn")
-        ax_energy.plot(qs["theta"],  qs["P_f"],    "g.",  markersize=5, label=r"$\hat P_f$ QS")
-        ax_energy.plot(dyn["theta"], dyn["P_f"],   "g-",  alpha=0.6,    label=r"$\hat P_f$ Dyn")
-        ax_energy.plot(qs["theta"],  qs["S"],      "r.",  markersize=5, label=r"$\hat S$ QS")
-        ax_energy.plot(dyn["theta"], dyn["S"],     "r-",  alpha=0.6,    label=r"$\hat S$ Dyn")
-        ax_energy.plot(qs["theta"],  qs["total"],  "k.",  markersize=5, label="Total QS")
-        ax_energy.plot(dyn["theta"], dyn["total"], "k-",  alpha=0.6,    label="Total Dyn (incl K)")
-        ax_energy.set_xlabel(r"$\theta(t)$"); ax_energy.set_ylabel("Energy")
+        # --- MODIFIED: Energy Plot (QS: dots, Dyn: crosses with faint lines) ---
+        ax_energy.plot(dyn["theta"], dyn["K"], color="m", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat K$ (dyn only)")
+        
+        ax_energy.plot(qs["theta"],  qs["P_el"],  color="b", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat P_{el}$ QS")
+        ax_energy.plot(dyn["theta"], dyn["P_el"], color="b", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat P_{el}$ Dyn")
+        
+        ax_energy.plot(qs["theta"],  qs["P_f"],   color="g", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat P_f$ QS")
+        ax_energy.plot(dyn["theta"], dyn["P_f"],  color="g", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat P_f$ Dyn")
+        
+        ax_energy.plot(qs["theta"],  qs["S"],    color="r", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat S$ QS")
+        ax_energy.plot(dyn["theta"], dyn["S"],    color="r", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat S$ Dyn")
+        
+        ax_energy.plot(qs["theta"],  qs["total"], color="k", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label="Total QS")
+        ax_energy.plot(dyn["theta"], dyn["total"], color="k", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label="Total Dyn (incl K)")
+        
+        ax_energy.set_xlabel(r"$\theta(t)$")
+        ax_energy.set_ylabel("Energy")
         ax_energy.set_title("Energy evolution")
-        ax_energy.grid(True, alpha=0.3); ax_energy.legend(fontsize=9, ncol=2, loc="best")
+        ax_energy.grid(True, alpha=0.3)
+        ax_energy.legend(fontsize=9, ncol=2, loc="best")
 
         cmap_qs  = plt.cm.viridis
         n_q = len(qs_snapshots)
@@ -437,8 +449,6 @@ def run_simulation(model_parameters, mesh_parameters, loading_parameters, AltMin
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_dir = os.path.join(script_dir, "Output")
         
-        # --- MODIFIED SECTION ---
-        # Create separate directories for png and pdf files
         png_dir = os.path.join(output_dir, "png")
         pdf_dir = os.path.join(output_dir, "pdf")
         os.makedirs(png_dir, exist_ok=True)
@@ -454,13 +464,11 @@ def run_simulation(model_parameters, mesh_parameters, loading_parameters, AltMin
         
         plt.savefig(png_path, dpi=300, bbox_inches="tight")
         plt.savefig(pdf_path, bbox_inches="tight")
-        # ------------------------
 
         print(f"Results saved to {output_dir}/")
         print(f"  - PNG: {png_path}")
         print(f"  - PDF: {pdf_path}")
 
-        # Crucial for sweeps: close the figure to free up memory and prevent blocking
         plt.close(fig) 
 
 
@@ -471,7 +479,7 @@ if __name__ == "__main__":
     
     # Base Configurations
     base_mesh_parameters    = {"nx": 200}
-    base_loading_parameters = {"theta_max": 4.0, "T0": 1.0, "N_steps_qs": 20, "N_steps_dyn": 60, "N_snapshots": 6}
+    base_loading_parameters = {"theta_max": 4.0, "T0": 1.0, "N_steps_qs": 30, "N_steps_dyn": 90, "N_snapshots": 6}
     base_AltMin_parameters  = {"max_iter": 500, "tol": 1e-7}
     base_Newmark_parameters = {"beta": 0.25, "gamma": 0.5}
 

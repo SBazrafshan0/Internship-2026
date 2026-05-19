@@ -391,10 +391,15 @@ def run_simulation(l_hat_val, lambda_val, eta_val):
         )
         fig.suptitle(header_text, fontsize=13, fontweight="bold", y=0.97)
 
-        ax_force.plot(qs["U"],  qs["F"],  "k.-", label="QS")
-        ax_force.plot(dyn["U"], dyn["F"], "r-", label=r"dynamic, $\eta=%g$" % eta_val, alpha=0.75)
-        ax_force.set_xlabel(r"$\hat{U}(t)$"); ax_force.set_ylabel(r"reaction $\hat{F}$")
-        ax_force.set_title("Force-displacement"); ax_force.grid(True, alpha=0.3); ax_force.legend()
+        # --- MODIFIED: Force Plot (QS: dots, Dyn: crosses with faint lines) ---
+        ax_force.plot(qs["U"],  qs["F"],  color="black", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label="QS")
+        ax_force.plot(dyn["U"], dyn["F"], color="red", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=fr"dynamic, $\eta={eta_val}$")
+        
+        ax_force.set_xlabel(r"$\hat{U}(t)$")
+        ax_force.set_ylabel(r"reaction $\hat{F}$")
+        ax_force.set_title("Force-displacement")
+        ax_force.grid(True, alpha=0.3)
+        ax_force.legend()
 
         ax_dam.plot(x_alpha[ix_alpha], alpha_qs_final[ix_alpha],  "k-",  label="QS")
         ax_dam.plot(x_alpha[ix_alpha], alpha_dyn_final[ix_alpha], "r--", label="Dynamic")
@@ -402,17 +407,25 @@ def run_simulation(l_hat_val, lambda_val, eta_val):
         ax_dam.set_title(r"Final damage at $\hat{U}=\hat{U}_{\rm max}$")
         ax_dam.grid(True, alpha=0.3); ax_dam.legend()
 
-        ax_energy.plot(dyn["U"], dyn["K"],     "m-",  alpha=0.85,  label=r"$\hat{K}$ (dyn only)")
-        ax_energy.plot(qs["U"],  qs["P_el"],   "b.",  markersize=5, label=r"$\hat{P}_{el}$ QS")
-        ax_energy.plot(dyn["U"], dyn["P_el"],  "b-",  alpha=0.6,    label=r"$\hat{P}_{el}$ Dyn")
-        ax_energy.plot(qs["U"],  qs["P_f"],    "g.",  markersize=5, label=r"$\hat{P}_f$ QS")
-        ax_energy.plot(dyn["U"], dyn["P_f"],   "g-",  alpha=0.6,    label=r"$\hat{P}_f$ Dyn")
-        ax_energy.plot(qs["U"],  qs["S"],      "r.",  markersize=5, label=r"$\hat{S}$ QS")
-        ax_energy.plot(dyn["U"], dyn["S"],     "r-",  alpha=0.6,    label=r"$\hat{S}$ Dyn")
-        ax_energy.plot(qs["U"],  qs["total"],  "k.",  markersize=5, label="Total QS")
-        ax_energy.plot(dyn["U"], dyn["total"], "k-",  alpha=0.6,    label="Total Dyn (incl K)")
-        ax_energy.set_xlabel(r"$\hat{U}(t)$"); ax_energy.set_ylabel("Energy")
-        ax_energy.set_title("Energy evolution"); ax_energy.grid(True, alpha=0.3)
+        # --- MODIFIED: Energy Plot (QS: dots, Dyn: crosses with faint lines) ---
+        ax_energy.plot(dyn["U"], dyn["K"],     color="m", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat{K}$ (dyn only)")
+        
+        ax_energy.plot(qs["U"],  qs["P_el"],   color="b", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat{P}_{el}$ QS")
+        ax_energy.plot(dyn["U"], dyn["P_el"],  color="b", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat{P}_{el}$ Dyn")
+        
+        ax_energy.plot(qs["U"],  qs["P_f"],    color="g", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat{P}_f$ QS")
+        ax_energy.plot(dyn["U"], dyn["P_f"],   color="g", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat{P}_f$ Dyn")
+        
+        ax_energy.plot(qs["U"],  qs["S"],      color="r", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat{S}$ QS")
+        ax_energy.plot(dyn["U"], dyn["S"],     color="r", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label=r"$\hat{S}$ Dyn")
+        
+        ax_energy.plot(qs["U"],  qs["total"],  color="k", marker=".", linestyle="-", linewidth=0.6, alpha=0.7, label="Total QS")
+        ax_energy.plot(dyn["U"], dyn["total"], color="k", marker="x", linestyle="-", linewidth=0.6, alpha=0.7, label="Total Dyn (incl K)")
+        
+        ax_energy.set_xlabel(r"$\hat{U}(t)$")
+        ax_energy.set_ylabel("Energy")
+        ax_energy.set_title("Energy evolution")
+        ax_energy.grid(True, alpha=0.3)
         ax_energy.legend(fontsize=9, ncol=2, loc="best")
 
         err_text = (
@@ -430,8 +443,6 @@ def run_simulation(l_hat_val, lambda_val, eta_val):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_dir = os.path.join(script_dir, "Output")
         
-        # --- MODIFIED SECTION ---
-        # Create separate directories for png and pdf files
         png_dir = os.path.join(output_dir, "png")
         pdf_dir = os.path.join(output_dir, "pdf")
         os.makedirs(png_dir, exist_ok=True)
@@ -447,7 +458,6 @@ def run_simulation(l_hat_val, lambda_val, eta_val):
         pdf_path = os.path.join(pdf_dir, f"{filename_str}.pdf")
         plt.savefig(png_path, dpi=300, bbox_inches="tight")
         plt.savefig(pdf_path, bbox_inches="tight")
-        # ------------------------
 
         # Crucial for parameter sweeping: close the figure to prevent execution halting
         plt.close(fig) 
