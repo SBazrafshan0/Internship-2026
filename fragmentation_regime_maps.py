@@ -768,7 +768,7 @@ def _log_edges(centers):
 
 def _panel_regime_map(ax, lhat_vals, lambda_vals, regime, n_cracks,
                       inertia_mask=None, lhat_res=None, eta=None,
-                      show_counts=True):
+                      show_counts=False):
     Xe = _log_edges(lhat_vals)
     Ye = _log_edges(lambda_vals)
     cmap = ListedColormap([REGIME_COLORS[c] for c in (R_NONE, R_ONE, R_MULTI, R_DIFF)])
@@ -926,8 +926,8 @@ if __name__ == "__main__":
     # ---------------- configuration ----------------
     RECOMPUTE = True            
 
-    lhat_vals   = np.geomspace(0.005, 0.15, 10)
-    lambda_vals = np.geomspace(0.5,   50.0, 10)
+    lhat_vals   = np.geomspace(0.001, 0.2, 50)
+    lambda_vals = np.geomspace(0.1,   50.0, 50)
     eta_vals    = [0.001, 0.01, 0.05, 0.1]
 
     mesh_parameters    = {"nx": 200}
@@ -935,7 +935,7 @@ if __name__ == "__main__":
     AltMin_parameters  = {"max_iter": 500, "tol": 1e-5}
     Newmark_parameters = {"beta": 0.25, "gamma": 0.5}
 
-    N_QS, N_DYN = 50, 250        
+    N_QS, N_DYN = 50, 300        
     mech_loading  = {"U_max": 1.7,    "T0": 1.0, "N_steps_qs": N_QS, "N_steps_dyn": N_DYN}
     therm_loading = {"theta_max": 6.0, "T0": 1.0, "N_steps_qs": N_QS, "N_steps_dyn": N_DYN}
 
