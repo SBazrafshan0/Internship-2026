@@ -5,29 +5,26 @@ problems/thermal.py
 
 Geometry & loading
 ------------------
-* Bar :math:`[0, L_x]` (1D) or rectangular slab :math:`[0, L_x] \\times
-  [0, L_y]` (2D, triangular mesh).
-* **Free ends** in displacement (no Dirichlet on ``u``): the elastic
-  foundation alone removes the rigid-body translation.
-* Uniform thermal strain :math:`\\theta(t)` (eigenstrain) ramped along
-  ``t in [0,1]`` exactly as in :mod:`problems.dynamic`.
-* Damage is **free** at all boundaries -- in this problem cracks can nucleate
-  at the edges (and indeed they typically do).
+* Bar :math:`[0, L_x]` (1D) or *unstructured* triangulation of
+  :math:`[0, L_x]\\times[0, L_y]` (2D, Gmsh-generated).  Mesh resolution
+  driven by ``mesh_per_lhat``.
+* Free ends in displacement; the foundation alone removes the rigid body
+  motion.
+* Uniform thermal eigenstrain :math:`\\theta(t)` ramped as in the
+  mechanical problem.
+* Damage free at every boundary.
 
-The interesting observable is the *mean stress*
-:math:`\\bar\\sigma = \\frac{1}{|\\Omega|}\\int_\\Omega \\sigma\\,d\\Omega`
-as a function of :math:`\\theta`, plus the *fragmentation pattern*
-(number and spacing of cracks) for QS and dynamic runs.
+Stopping criterion
+------------------
+The QS and Dyn loops run until *any* damage point reaches
+``loading_parameters["alpha_break"]`` (default 0.99), with safety cap at
+``t = loading_parameters["t_max"]`` (default 3.0).
 
 Switches
 --------
-``solver_parameters["model"]``  -- ``"AT1"`` or ``"AT2"`` (see
-:mod:`tools.solvers`).
-``mesh_parameters["physics"]``  -- ``"1D"`` or ``"2D"``.
-
-Entry point
------------
-``run_problem(...)`` -- same signature as :mod:`problems.dynamic`.
+``solver_parameters["model"]`` -- ``"AT1"`` or ``"AT2"``.
+``mesh_parameters["physics"]`` -- ``"1D"`` or ``"2D"``.
+``mesh_parameters["shape"]``   -- registered shape (default ``"rectangle"``).
 """
 
 from __future__ import annotations
@@ -54,13 +51,9 @@ from tools.plotting  import (
 
 
 # =============================================================================
-# Thermal-loading ramp
+# Loading ramp
 # =============================================================================
 def _make_thermal_loader(loading_parameters):
-    """
-    Smooth ramp ``theta(t) = Thdot * ( sqrt(T0^2 + t^2) - T0 )`` with
-    ``theta(1) = theta_max``.
-    """
     t_sp     = sp.Symbol("t", real=True)
     T0_v     = loading_parameters["T0"]
     ThMax_v  = loading_parameters["theta_max"]
@@ -69,9 +62,6 @@ def _make_thermal_loader(loading_parameters):
     return sp.lambdify(t_sp, Theta_sp, "numpy")
 
 
-# =============================================================================
-# Function spaces (same convention as in problems.dynamic)
-# =============================================================================
 def _setup_function_spaces(domain, physics):
     V_alpha = fem.functionspace(domain, ("Lagrange", 1))
     if physics == "1D":
@@ -79,6 +69,11 @@ def _setup_function_spaces(domain, physics):
     else:
         V_u = fem.functionspace(domain, ("Lagrange", 1, (domain.geometry.dim,)))
     return V_u, V_alpha
+
+
+def _alpha_max(alpha, comm_):
+    local = float(alpha.x.array.max()) if alpha.x.array.size else 0.0
+    return float(comm_.allreduce(local, op=MPI.MAX))
 
 
 # =============================================================================
@@ -101,7 +96,9 @@ def run_problem(
     model_name = solver_parameters["model"]
     n_qs       = loading_parameters["N_steps_qs"]
     n_dyn      = loading_parameters["N_steps_dyn"]
-    N_snap     = loading_parameters.get("N_snapshots", 6)
+    alpha_break = float(loading_parameters.get("alpha_break", 0.99))
+    t_max       = float(loading_parameters.get("t_max", 3.0))
+    N_snap      = loading_parameters.get("N_snapshots", 6)
 
     if verbose and comm.rank == 0:
         print(
@@ -109,15 +106,16 @@ def run_problem(
             f"l_hat={model_parameters['l_hat']}, "
             f"Lambda={model_parameters['Lambda']}, "
             f"eta={model_parameters['eta']}  |  "
-            f"N_qs={n_qs}, N_dyn={n_dyn}"
+            f"mesh_per_lhat={mesh_parameters.get('mesh_per_lhat', 4)}  |  "
+            f"dt_QS=1/{n_qs}, dt_Dyn=1/{n_dyn}  |  "
+            f"stop at alpha={alpha_break} or t={t_max}"
         )
 
     # -------------------------------------------------------------------------
     # Mesh / spaces
     # -------------------------------------------------------------------------
-    domain, mt, dx, ds = create_mesh_and_tags(mesh_parameters, comm)
+    domain, mt, dx, ds = create_mesh_and_tags(mesh_parameters, model_parameters, comm)
     V_u, V_alpha = _setup_function_spaces(domain, physics)
-
     if verbose:
         print_mesh_info(domain, V_u, V_alpha,
                         label=f"THERM {physics}", comm_=domain.comm)
@@ -134,11 +132,10 @@ def run_problem(
     alpha_lb       = fem.Function(V_alpha)
     alpha_ub       = fem.Function(V_alpha)
 
-    # Free boundaries everywhere -> no Dirichlet BC on u, v, a, alpha.
     bcs_u, bcs_v, bcs_a, bcs_alpha = [], [], [], []
 
     # -------------------------------------------------------------------------
-    # Constants and energies
+    # Constants + energies
     # -------------------------------------------------------------------------
     Lambda_c  = fem.Constant(domain, PETSc.ScalarType(model_parameters["Lambda"]))
     l_hat_c   = fem.Constant(domain, PETSc.ScalarType(model_parameters["l_hat"]))
@@ -158,7 +155,7 @@ def run_problem(
         strain_e_density     = 0.5 * g * ufl.inner(eps_e, eps_e)
         foundation_e_density = 0.5 * Lambda_c ** 2 * ufl.dot(u, u)
         kinetic_e_density    = 0.5 * eta_c ** 2 * ufl.dot(v, v)
-        sigma = g * 2.0 * eps_e          # mu = 1, lambda_lame = 0
+        sigma = g * 2.0 * eps_e
         mean_stress_expr     = sigma[0, 0]
 
     fracture_e_density = fracture_energy_density(alpha, grad_sq(alpha, physics),
@@ -177,15 +174,11 @@ def run_problem(
     mean_stress_form       = fem.form(mean_stress_expr * dx)
     error_L2_alpha_form    = fem.form((alpha - alpha_old_iter) ** 2 * dx)
 
-    # -------------------------------------------------------------------------
-    # Variational equations
-    # -------------------------------------------------------------------------
     u_test     = ufl.TestFunction(V_u)
     alpha_test = ufl.TestFunction(V_alpha)
 
     Res_u_qs     = ufl.derivative(potential_energy, u, u_test)
     Res_alpha_qs = ufl.derivative(potential_energy + fracture_energy, alpha, alpha_test)
-
     if physics == "1D":
         inertia_term = eta_c ** 2 * a_new * u_test * dx
     else:
@@ -205,7 +198,7 @@ def run_problem(
     solver_alpha_qs = make_damage_snes(damage_problem_qs,  alpha_lb, alpha_ub)
 
     # -------------------------------------------------------------------------
-    # QS loop
+    # QS loop -- while max(alpha) < alpha_break and t < t_max
     # -------------------------------------------------------------------------
     u.x.array[:] = 0.0; v.x.array[:] = 0.0; a.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
@@ -215,31 +208,28 @@ def run_problem(
 
     qs = {"t": [], "theta": [], "sigma_bar": [], "P_el": [], "P_f": [], "S": [], "total": []}
     qs_snapshots = []
-    snap_idx_qs = set(np.unique(np.linspace(0, n_qs - 1, N_snap, dtype=int)).tolist())
+    dt_qs = 1.0 / n_qs
+    n_qs_max = max(1, int(np.ceil(t_max / dt_qs)))
+    snap_every_qs = max(1, n_qs_max // max(1, N_snap))
+    pbar_qs = tqdm(total=n_qs_max,
+                   desc=f"QS  [{physics}|{model_name}]",
+                   dynamic_ncols=True,
+                   disable=not (verbose and comm.rank == 0))
 
-    t_grid_qs = np.linspace(0.0, 1.0, n_qs + 1)[1:]
-
-    qs_iter = (
-        tqdm(list(enumerate(t_grid_qs)),
-             desc=f"QS  [{physics}|{model_name}]",
-             total=n_qs, dynamic_ncols=True,
-             disable=not (verbose and comm.rank == 0))
-        if verbose else enumerate(t_grid_qs)
-    )
-    for i, ti in qs_iter:
-        theta_c.value = float(Theta_fn(ti))
+    t_cur = 0.0
+    i = 0
+    while t_cur + 1e-12 < t_max:
+        i += 1
+        t_cur += dt_qs
+        theta_c.value = float(Theta_fn(t_cur))
         n_alt = alt_min_loop(solver_u_qs, u.x.petsc_vec,
                              solver_alpha_qs, alpha,
                              alpha_old_iter, error_L2_alpha_form,
                              AltMin_parameters["max_iter"], AltMin_parameters["tol"],
                              comm_=domain.comm)
         alpha_lb.x.array[:] = alpha.x.array
-        if hasattr(qs_iter, "set_postfix"):
-            alpha_max = float(domain.comm.allreduce(alpha.x.array.max(), op=MPI.MAX))
-            qs_iter.set_postfix(theta=f"{float(theta_c.value):.3f}",
-                                a_max=f"{alpha_max:.3f}", altmin=n_alt)
 
-        qs["t"].append(float(ti))
+        qs["t"].append(float(t_cur))
         qs["theta"].append(float(theta_c.value))
         qs["sigma_bar"].append(domain.comm.allreduce(fem.assemble_scalar(mean_stress_form),    op=MPI.SUM))
         qs["P_el"].append(domain.comm.allreduce(fem.assemble_scalar(strain_energy_form),       op=MPI.SUM))
@@ -247,17 +237,25 @@ def run_problem(
         qs["S"].append(domain.comm.allreduce(fem.assemble_scalar(fracture_energy_form),        op=MPI.SUM))
         qs["total"].append(qs["P_el"][-1] + qs["P_f"][-1] + qs["S"][-1])
 
-        if i in snap_idx_qs:
-            qs_snapshots.append({"step": i, "t": float(ti),
+        a_max = _alpha_max(alpha, domain.comm)
+        pbar_qs.update(1)
+        pbar_qs.set_postfix(t=f"{t_cur:.3f}", theta=f"{float(theta_c.value):.3f}",
+                            a_max=f"{a_max:.3f}", altmin=n_alt)
+
+        if i % snap_every_qs == 0 or a_max >= alpha_break:
+            qs_snapshots.append({"step": i, "t": float(t_cur),
                                  "theta": float(theta_c.value),
                                  "alpha": alpha.x.array.copy()})
+        if a_max >= alpha_break:
+            break
+    pbar_qs.close()
 
     alpha_qs_final = alpha.x.array.copy()
     for k in qs:
         qs[k] = np.asarray(qs[k])
 
     # -------------------------------------------------------------------------
-    # Dynamic Newmark SNES
+    # SNES setup (Dyn)
     # -------------------------------------------------------------------------
     beta_v  = Newmark_parameters["beta"]
     gamma_v = Newmark_parameters["gamma"]
@@ -278,6 +276,9 @@ def run_problem(
 
     delta_t_c.value = 1.0 / n_dyn
 
+    # -------------------------------------------------------------------------
+    # Dynamic loop -- while max(alpha) < alpha_break and t < t_max
+    # -------------------------------------------------------------------------
     for fn in (u, u_new, v, v_new, a, a_new):
         fn.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
@@ -287,19 +288,20 @@ def run_problem(
 
     dyn = {"t": [], "theta": [], "sigma_bar": [], "K": [], "P_el": [], "P_f": [], "S": [], "total": []}
     dyn_snapshots = []
-    snap_idx_dyn = set(np.unique(np.linspace(0, n_dyn - 1, N_snap, dtype=int)).tolist())
     paraview_alpha = []
     paraview_u     = []
+    dt = 1.0 / n_dyn
+    n_dyn_max = max(1, int(np.ceil(t_max / dt)))
+    snap_every_dyn = max(1, n_dyn_max // max(1, N_snap))
+    pbar_dyn = tqdm(total=n_dyn_max,
+                    desc=f"Dyn [{physics}|{model_name}]",
+                    dynamic_ncols=True,
+                    disable=not (verbose and comm.rank == 0))
 
-    dt    = 1.0 / n_dyn
     t_cur = 0.0
-    dyn_iter = (
-        tqdm(range(n_dyn), desc=f"Dyn [{physics}|{model_name}]",
-             total=n_dyn, dynamic_ncols=True,
-             disable=not (verbose and comm.rank == 0))
-        if verbose else range(n_dyn)
-    )
-    for step in dyn_iter:
+    step = 0
+    while t_cur + 1e-12 < t_max:
+        step += 1
         t_cur += dt
         theta_c.value = float(Theta_fn(t_cur))
 
@@ -335,7 +337,13 @@ def run_problem(
         dyn["S"].append(domain.comm.allreduce(fem.assemble_scalar(fracture_energy_form),     op=MPI.SUM))
         dyn["total"].append(dyn["K"][-1] + dyn["P_el"][-1] + dyn["P_f"][-1] + dyn["S"][-1])
 
-        if step in snap_idx_dyn:
+        a_max = _alpha_max(alpha, domain.comm)
+        pbar_dyn.update(1)
+        pbar_dyn.set_postfix(t=f"{t_cur:.3f}", theta=f"{float(theta_c.value):.3f}",
+                             K=f"{dyn['K'][-1]:.2e}",
+                             a_max=f"{a_max:.3f}", altmin=n_alt)
+
+        if step % snap_every_dyn == 0 or a_max >= alpha_break:
             dyn_snapshots.append({"step": step, "t": float(t_cur),
                                   "theta": float(theta_c.value),
                                   "alpha": alpha.x.array.copy()})
@@ -347,11 +355,9 @@ def run_problem(
                 u_snap.x.array[:] = u.x.array
                 paraview_u.append((t_cur, u_snap))
 
-        if hasattr(dyn_iter, "set_postfix"):
-            alpha_max = float(domain.comm.allreduce(alpha.x.array.max(), op=MPI.MAX))
-            dyn_iter.set_postfix(theta=f"{float(theta_c.value):.3f}",
-                                 K=f"{dyn['K'][-1]:.2e}",
-                                 a_max=f"{alpha_max:.3f}", altmin=n_alt)
+        if a_max >= alpha_break:
+            break
+    pbar_dyn.close()
 
     alpha_dyn_final = alpha.x.array.copy()
     for k in dyn:
@@ -377,6 +383,7 @@ def run_problem(
 
     if output_dir is None:
         output_dir = ROOT / "output"
+
 
     if plot and comm.rank == 0:
         png, pdf = plot_thermal_run(result, model_parameters, mesh_parameters,
@@ -405,10 +412,8 @@ if __name__ == "__main__":
 
     # ----- edit *here* to switch model / physics --------------------------
     cfg["solver_parameters"]["model"]   = "AT2"        # "AT1" or "AT2"
-    cfg["mesh_parameters"]["physics"]   = "1D"         # "1D"  or "2D"
-    # 2D-only:
-    cfg["mesh_parameters"]["nx"]        = 50
-    cfg["mesh_parameters"]["ny"]        = 20
+    cfg["mesh_parameters"]["physics"]   = "2D"         # "1D"  or "2D"
+    cfg["mesh_parameters"]["mesh_per_lhat"] = 2
     # ----------------------------------------------------------------------
 
     run_problem(**cfg)

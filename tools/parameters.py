@@ -6,52 +6,53 @@ Default parameter dictionaries.
 Everything is **non-dimensional** and dimension-agnostic, i.e. exactly the same
 dictionaries are reused for 1D and 2D problems.  The geometric / dimensional
 information lives in ``mesh_parameters``; ``physics`` is the switch that
-selects between a 1D segment and a 2D rectangle (triangular mesh).
+selects between a 1D segment and a 2D unstructured (Gmsh) triangulation.
 
 Physical / model parameters
 ---------------------------
 ``l_hat``  -- regularisation length :math:`\\hat\\ell` (ratio of the
 internal length to the characteristic length of the domain).
-``Lambda`` -- foundation stiffness :math:`\\Lambda` (non-dimensional);
-controls how strongly the bar / plate is pulled back towards the reference
-configuration.
-``eta``    -- inverse wave-speed :math:`\\eta = \\sqrt{\\rho/E}\\,L/\\tau`,
-i.e. the dynamical parameter that toggles between the quasi-static and the
-truly inertial regimes.
+``Lambda`` -- foundation stiffness :math:`\\Lambda` (non-dimensional).
+``eta``    -- inverse wave-speed :math:`\\eta`.
 
 Mesh parameters
 ---------------
-``physics`` -- ``"1D"`` or ``"2D"``.
-``nx``      -- number of cells along x (for 2D, ``ny`` defaults to ``nx``,
-the rectangle is meshed with **triangles** and the option
-``diagonal="crossed"`` to keep the mesh symmetric).
-``Lx``, ``Ly`` -- domain dimensions (1D uses only ``Lx``).
+``physics``       -- ``"1D"`` or ``"2D"``.
+``shape``         -- ``"rectangle"`` (default).  Anything you register in
+                      :data:`tools.meshing.GEOMETRY_BUILDERS` is accepted.
+``mesh_per_lhat`` -- *single* knob controlling mesh resolution.  The cell
+                      size is set to ``h = l_hat / mesh_per_lhat``.  Use
+                      ``>= 4`` to resolve diffuse crack bands cleanly.
+``Lx``, ``Ly``    -- domain dimensions (1D uses only ``Lx``).
 
 Loading parameters
 ------------------
-``U_max`` / ``theta_max`` -- imposed amplitude of the displacement /
-thermal load at the end of the pseudo-time interval ``t in [0,1]``.
-``T0``                   -- smoothing length of the load ramp
-``U(t) = U_dot (sqrt(T0^2 + t^2) - T0)`` (a ``C^{\\infty}`` ramp that starts
-with zero velocity).
-``N_steps_qs`` / ``N_steps_dyn`` -- number of pseudo-time steps for the
-quasi-static and dynamic loops.
-``N_snapshots`` -- number of intermediate damage profiles stored for
-visualisation.
+``U_max`` / ``theta_max`` -- *amplitude* of the load at the canonical
+pseudo-time ``t = 1`` (the load keeps growing past ``t = 1`` if the
+simulation is not yet stopped by the damage criterion).
+``T0``                   -- smoothing length of the ramp.
+``N_steps_qs`` / ``N_steps_dyn`` -- *resolution* of the pseudo-time grid:
+the step size is ``dt = 1 / N_steps``.  The total number of steps is
+*not* fixed -- the simulation stops when the damage threshold is reached
+(see below).
+``N_snapshots`` -- number of intermediate snapshots kept for plotting.
+``alpha_break`` -- stop when :math:`\\max_\\Omega\\alpha \\ge`
+``alpha_break`` (default 0.99 -- "complete failure at some point").
+``t_max``       -- safety upper bound on the pseudo-time.  If the damage
+threshold is never reached, the run bails out at ``t = t_max`` (default
+3.0, i.e. up to triple the canonical loading amplitude).
 
 Solver parameters
 -----------------
-``model`` -- ``"AT1"`` or ``"AT2"`` (see :mod:`tools.solvers`).
+``model`` -- ``"AT1"`` or ``"AT2"``.
 
-Alternate-minimisation parameters
----------------------------------
+Alternate-minimisation
+----------------------
 ``max_iter``, ``tol`` -- outer-loop convergence settings.
 
-Newmark parameters
-------------------
-``beta``, ``gamma`` -- standard Newmark-:math:`\\beta` coefficients; defaults
-to the unconditionally stable :math:`\\beta = 1/4`, :math:`\\gamma = 1/2`
-(implicit average acceleration).
+Newmark
+-------
+``beta``, ``gamma`` -- standard Newmark-:math:`\\beta` coefficients.
 """
 
 from copy import deepcopy
@@ -67,31 +68,35 @@ DEFAULT_MODEL_PARAMETERS = {
 }
 
 DEFAULT_MESH_PARAMETERS = {
-    "physics": "1D",          # "1D" or "2D"
-    "nx": 200,
-    "ny": None,               # 2D only; falls back to nx when None
-    "Lx": 1.0,
-    "Ly": 0.2,
+    "physics":       "1D",          # "1D" or "2D"
+    "shape":         "rectangle",   # any key registered in GEOMETRY_BUILDERS
+    "mesh_per_lhat": 4,             # cells per regularisation length
+    "Lx":            1.0,
+    "Ly":            0.2,
 }
 
 DEFAULT_MECH_LOADING = {
-    "U_max":      1.4,
-    "T0":         1.0,
-    "N_steps_qs":  60,
+    "U_max":       1.4,
+    "T0":          1.0,
+    "N_steps_qs":   60,             # step *resolution*  (dt = 1/N)
     "N_steps_dyn": 180,
-    "N_snapshots": 6,
+    "N_snapshots":   6,
+    "alpha_break": 0.99,            # stop when max(alpha) >= this
+    "t_max":         3.0,           # safety cap on pseudo-time
 }
 
 DEFAULT_THERM_LOADING = {
-    "theta_max":  1.75,
-    "T0":         1.0,
-    "N_steps_qs":  60,
+    "theta_max":   4.0,
+    "T0":          1.0,
+    "N_steps_qs":   60,
     "N_steps_dyn": 180,
-    "N_snapshots": 6,
+    "N_snapshots":   6,
+    "alpha_break": 0.99,
+    "t_max":         3.0,
 }
 
 DEFAULT_SOLVER_PARAMETERS = {
-    "model": "AT2",           # "AT1" or "AT2"
+    "model": "AT2",                 # "AT1" or "AT2"
 }
 
 DEFAULT_ALTMIN_PARAMETERS = {
@@ -138,18 +143,18 @@ def filename_stub(physics_type: str, model: dict, mesh: dict,
     Used by :mod:`tools.plotting` so that PNG/PDF/XDMF outputs of different
     runs cannot be silently overwritten.
     """
-    ph = mesh["physics"]
-    mdl = solver["model"]
+    ph    = mesh["physics"]
+    shape = mesh.get("shape", "rectangle")
+    mdl   = solver["model"]
+    mpl   = mesh.get("mesh_per_lhat", 4)
     if physics_type == "mechanical":
         amp_key, amp_val = "umax", loading["U_max"]
     else:
         amp_key, amp_val = "thmax", loading["theta_max"]
-    nx, ny = mesh["nx"], (mesh.get("ny") or mesh["nx"])
-    mesh_tag = f"nx{nx}" if ph == "1D" else f"nx{nx}_ny{ny}"
     return (
-        f"{physics_type}_{ph}_{mdl}"
+        f"{physics_type}_{ph}_{shape}_{mdl}"
         f"_lhat{model['l_hat']}_lam{model['Lambda']}_eta{model['eta']}"
         f"_{amp_key}{amp_val:.2f}"
         f"_nQS{loading['N_steps_qs']}_nDyn{loading['N_steps_dyn']}"
-        f"_{mesh_tag}_T0{loading['T0']}"
+        f"_mpl{mpl}_T0{loading['T0']}"
     )

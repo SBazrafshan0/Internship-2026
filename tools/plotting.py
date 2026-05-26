@@ -107,7 +107,7 @@ def plot_mechanical_run(
         rf"$U_{{\max}}={loading_parameters['U_max']:.2f}$ | "
         rf"$N_{{QS}}={loading_parameters['N_steps_qs']}$ | "
         rf"$N_{{Dyn}}={loading_parameters['N_steps_dyn']}$ | "
-        rf"$N_x={mesh_parameters['nx']}$ | $T_0={loading_parameters['T0']}$"
+        rf"$h/\hat\ell=1/{mesh_parameters['mesh_per_lhat']}$ | $T_0={loading_parameters['T0']}$"
     )
     fig.suptitle(header, fontsize=13, fontweight="bold", y=0.97)
 
@@ -194,7 +194,7 @@ def plot_thermal_run(
         rf"$\theta_{{\max}}={loading_parameters['theta_max']:.2f}$ | "
         rf"$N_{{QS}}={loading_parameters['N_steps_qs']}$ | "
         rf"$N_{{Dyn}}={loading_parameters['N_steps_dyn']}$ | "
-        rf"$N_x={mesh_parameters['nx']}$ | $T_0={loading_parameters['T0']}$"
+        rf"$h/\hat\ell=1/{mesh_parameters['mesh_per_lhat']}$ | $T_0={loading_parameters['T0']}$"
     )
     fig.suptitle(header, fontsize=13, fontweight="bold", y=0.97)
 

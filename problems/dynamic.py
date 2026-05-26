@@ -5,40 +5,37 @@ problems/dynamic.py
 
 Geometry & loading
 ------------------
-* Bar :math:`[0, L_x]` (1D) or rectangular strip :math:`[0, L_x] \\times
-  [0, L_y]` (2D, triangular mesh).
+* Bar :math:`[0, L_x]` (1D) or *unstructured* triangulation of
+  :math:`[0, L_x]\\times[0, L_y]` (2D, Gmsh-generated).  Mesh resolution is
+  controlled by a single knob ``mesh_per_lhat`` (number of cells per
+  regularisation length).
 * Left end clamped:  ``u = 0``  (in 2D both components).
 * Right end pulled:  ``u_x = U(t)`` with the smooth ramp
-  ``U(t) = U_dot ( sqrt(T0^2 + t^2) - T0 )``,  ``U_dot`` chosen so that
-  ``U(1) = U_max``.  In 2D the *y*-component of the displacement is left
-  free on the right edge.
+  ``U(t) = U_dot ( sqrt(T0^2 + t^2) - T0 )``.  ``U_dot`` is chosen so that
+  ``U(1) = U_max`` -- the load *keeps growing past* ``t = 1`` if the
+  simulation hasn't reached the breakage threshold yet.
 * Damage Dirichlet:  ``alpha = 0`` on both end-edges (no crack can nucleate
   at the loading device).
 * Elastic foundation everywhere:  energy density
   ``0.5 * Lambda^2 * |u|^2``.
 
-Two computations are run for every parameter set:
+Stopping criterion
+------------------
+The QS and Dyn loops run until *any* damage point reaches
+``loading_parameters["alpha_break"]`` (default 0.99), with a safety cap at
+``t = loading_parameters["t_max"]`` (default 3.0).
 
-1. **Quasi-static** (Alternate Minimisation) along the ramp ``t in (0,1]``.
-2. **Dynamic**  (implicit Newmark-:math:`\\beta`) on the *same* ramp.
-
-To change the *model variant* (AT1/AT2) or the *physics* (1D/2D), set
-``solver_parameters["model"]`` and ``mesh_parameters["physics"]`` at the
-bottom of the file.  Nothing else has to change.
-
-Entry point
------------
-``run_problem(model_parameters, mesh_parameters, loading_parameters,
-solver_parameters, AltMin_parameters, Newmark_parameters, plot=True,
-paraview=True, output_dir=...)``
+Switches
+--------
+``solver_parameters["model"]`` -- ``"AT1"`` or ``"AT2"``.
+``mesh_parameters["physics"]`` -- ``"1D"`` or ``"2D"``.
+``mesh_parameters["shape"]``   -- any registered shape (default ``"rectangle"``).
 """
 
 from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Make sure the repository root is on the import path when this file is run
-# directly (``python problems/dynamic.py``).
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -52,22 +49,17 @@ from tools.helpers   import (
 )
 from tools.meshing   import create_mesh_and_tags, grad_sq, strain
 from tools.solvers   import fracture_energy_density, g_degradation
-from tools.parameters import (
-    get_defaults, filename_stub,
-)
+from tools.parameters import get_defaults
 from tools.plotting  import (
     plot_mechanical_run, export_paraview, triangulation_from_domain,
 )
 
 
 # =============================================================================
-# Helpers specific to the mechanical problem
+# Loading ramp
 # =============================================================================
 def _make_displacement_loader(loading_parameters):
-    """
-    Build the symbolic ramp ``U(t)``, ``V(t) = U'(t)``, ``A(t) = U''(t)`` and
-    return three numpy-callable functions.
-    """
+    """Return ``U(t)``, ``V(t) = U'``, ``A(t) = U''`` as numpy callables."""
     t_sp   = sp.Symbol("t", real=True)
     T0_v   = loading_parameters["T0"]
     Umax_v = loading_parameters["U_max"]
@@ -75,14 +67,12 @@ def _make_displacement_loader(loading_parameters):
     U_sp = Udot * (sp.sqrt(T0_v ** 2 + t_sp ** 2) - T0_v)
     V_sp = sp.diff(U_sp, t_sp)
     A_sp = sp.diff(V_sp, t_sp)
-    U_fn = sp.lambdify(t_sp, U_sp, "numpy")
-    V_fn = sp.lambdify(t_sp, V_sp, "numpy")
-    A_fn = sp.lambdify(t_sp, A_sp, "numpy")
-    return U_fn, V_fn, A_fn
+    return (sp.lambdify(t_sp, U_sp, "numpy"),
+            sp.lambdify(t_sp, V_sp, "numpy"),
+            sp.lambdify(t_sp, A_sp, "numpy"))
 
 
 def _setup_function_spaces(domain, physics):
-    """Scalar damage space + (scalar in 1D, vector in 2D) displacement space."""
     V_alpha = fem.functionspace(domain, ("Lagrange", 1))
     if physics == "1D":
         V_u = fem.functionspace(domain, ("Lagrange", 1))
@@ -91,11 +81,10 @@ def _setup_function_spaces(domain, physics):
     return V_u, V_alpha
 
 
-def _u_component(u, physics, idx=0):
-    """Return ``u`` (1D) or ``u[idx]`` (2D)."""
-    if physics == "1D":
-        return u
-    return u[idx]
+def _alpha_max(alpha, comm_):
+    """Global maximum of the damage field across MPI ranks."""
+    local = float(alpha.x.array.max()) if alpha.x.array.size else 0.0
+    return float(comm_.allreduce(local, op=MPI.MAX))
 
 
 # =============================================================================
@@ -113,17 +102,14 @@ def run_problem(
     output_dir: str | Path | None = None,
     verbose: bool = True,
 ) -> dict:
-    """
-    Run one *quasi-static + dynamic* mechanical simulation.
-
-    Returns a dictionary that contains the energy/reaction histories of both
-    runs, the final damage fields, and (for 2D) a matplotlib triangulation so
-    that the plotter can ``tripcolor`` directly.
-    """
+    """Run one *quasi-static + dynamic* mechanical simulation."""
     physics    = mesh_parameters["physics"]
     model_name = solver_parameters["model"]
     n_qs       = loading_parameters["N_steps_qs"]
     n_dyn      = loading_parameters["N_steps_dyn"]
+    alpha_break = float(loading_parameters.get("alpha_break", 0.99))
+    t_max       = float(loading_parameters.get("t_max", 3.0))
+    N_snap      = loading_parameters.get("N_snapshots", 6)
 
     if verbose and comm.rank == 0:
         print(
@@ -131,22 +117,22 @@ def run_problem(
             f"l_hat={model_parameters['l_hat']}, "
             f"Lambda={model_parameters['Lambda']}, "
             f"eta={model_parameters['eta']}  |  "
-            f"N_qs={n_qs}, N_dyn={n_dyn}"
+            f"mesh_per_lhat={mesh_parameters.get('mesh_per_lhat', 4)}  |  "
+            f"dt_QS=1/{n_qs}, dt_Dyn=1/{n_dyn}  |  "
+            f"stop at alpha={alpha_break} or t={t_max}"
         )
 
     # -------------------------------------------------------------------------
     # Mesh / tags / spaces
     # -------------------------------------------------------------------------
-    domain, mt, dx, ds = create_mesh_and_tags(mesh_parameters, comm)
+    domain, mt, dx, ds = create_mesh_and_tags(mesh_parameters, model_parameters, comm)
     V_u, V_alpha = _setup_function_spaces(domain, physics)
     gdim = domain.geometry.dim
     fdim = domain.topology.dim - 1
-
     if verbose:
         print_mesh_info(domain, V_u, V_alpha,
                         label=f"MECH {physics}", comm_=domain.comm)
 
-    # Kinematic fields
     u     = fem.Function(V_u, name="Displacement")
     v     = fem.Function(V_u, name="Velocity")
     a     = fem.Function(V_u, name="Acceleration")
@@ -166,7 +152,6 @@ def run_problem(
     right_facets = mt.find(2)
 
     if physics == "1D":
-        # Scalar displacement -> direct Dirichlet on V_u
         u_left_val  = fem.Constant(domain, PETSc.ScalarType(0.0))
         u_right_val = fem.Constant(domain, PETSc.ScalarType(0.0))
         v_left_val  = fem.Constant(domain, PETSc.ScalarType(0.0))
@@ -177,33 +162,19 @@ def run_problem(
         left_dofs_u  = fem.locate_dofs_topological(V_u, fdim, left_facets)
         right_dofs_u = fem.locate_dofs_topological(V_u, fdim, right_facets)
 
-        bcs_u = [
-            fem.dirichletbc(u_left_val,  left_dofs_u,  V_u),
-            fem.dirichletbc(u_right_val, right_dofs_u, V_u),
-        ]
-        bcs_v = [
-            fem.dirichletbc(v_left_val,  left_dofs_u,  V_u),
-            fem.dirichletbc(v_right_val, right_dofs_u, V_u),
-        ]
-        bcs_a = [
-            fem.dirichletbc(a_left_val,  left_dofs_u,  V_u),
-            fem.dirichletbc(a_right_val, right_dofs_u, V_u),
-        ]
+        bcs_u = [fem.dirichletbc(u_left_val,  left_dofs_u,  V_u),
+                 fem.dirichletbc(u_right_val, right_dofs_u, V_u)]
+        bcs_v = [fem.dirichletbc(v_left_val,  left_dofs_u,  V_u),
+                 fem.dirichletbc(v_right_val, right_dofs_u, V_u)]
+        bcs_a = [fem.dirichletbc(a_left_val,  left_dofs_u,  V_u),
+                 fem.dirichletbc(a_right_val, right_dofs_u, V_u)]
 
-    else:  # 2D ----------------------------------------------------------------
-        # Left edge: clamp both components.  Right edge: only x-component.
+    else:  # 2D
         zero_vec = fem.Function(V_u)
         zero_vec.x.array[:] = 0.0
-
-        # Clamp on the left edge (both components) -- pass Function + ndarray
-        # (form 3 of dolfinx.fem.dirichletbc).
         left_dofs_full = fem.locate_dofs_topological(V_u, fdim, left_facets)
         bc_left_clamp = fem.dirichletbc(zero_vec, left_dofs_full)
 
-        # Imposed x-displacement on the right edge -- pass Constant + ndarray +
-        # sub-space (form 2 of dolfinx.fem.dirichletbc).  Locating dofs on the
-        # *single* sub-space ``V_u.sub(0)`` returns a single ndarray of dofs in
-        # the parent space, which is what form 2 expects.
         u_right_val = fem.Constant(domain, PETSc.ScalarType(0.0))
         v_right_val = fem.Constant(domain, PETSc.ScalarType(0.0))
         a_right_val = fem.Constant(domain, PETSc.ScalarType(0.0))
@@ -218,7 +189,6 @@ def run_problem(
         bcs_v = [bc_left_clamp, bc_v_right]
         bcs_a = [bc_left_clamp, bc_a_right]
 
-    # Damage: alpha=0 on both end-edges (no nucleation at the loading device)
     left_dofs_alpha  = fem.locate_dofs_topological(V_alpha, fdim, left_facets)
     right_dofs_alpha = fem.locate_dofs_topological(V_alpha, fdim, right_facets)
     bcs_alpha = [
@@ -227,7 +197,7 @@ def run_problem(
     ]
 
     # -------------------------------------------------------------------------
-    # Material constants & energies
+    # Material + energies
     # -------------------------------------------------------------------------
     Lambda_c  = fem.Constant(domain, PETSc.ScalarType(model_parameters["Lambda"]))
     l_hat_c   = fem.Constant(domain, PETSc.ScalarType(model_parameters["l_hat"]))
@@ -241,16 +211,14 @@ def run_problem(
         strain_e_density     = 0.5 * g * eps ** 2
         foundation_e_density = 0.5 * Lambda_c ** 2 * u ** 2
         kinetic_e_density    = 0.5 * eta_c ** 2 * v ** 2
-        # Reaction at the right end:  (1-alpha)^2 * eps  evaluated on ds(2).
-        reaction_form_expr = g * eps
+        reaction_form_expr   = g * eps
     else:
         eps = strain(u, "2D")
         strain_e_density     = 0.5 * g * ufl.inner(eps, eps)
         foundation_e_density = 0.5 * Lambda_c ** 2 * ufl.dot(u, u)
         kinetic_e_density    = 0.5 * eta_c ** 2 * ufl.dot(v, v)
-        # Horizontal reaction:  sigma_xx on the right edge.
-        sigma = g * (2.0 * eps)       # mu = 1, lambda_lame = 0 normalisation
-        reaction_form_expr = sigma[0, 0]
+        sigma = g * (2.0 * eps)
+        reaction_form_expr   = sigma[0, 0]
 
     fracture_e_density = fracture_energy_density(alpha, grad_sq(alpha, physics),
                                                  l_hat_c, model_name)
@@ -268,68 +236,57 @@ def run_problem(
     reaction_right_form    = fem.form(reaction_form_expr * ds(2))
     error_L2_alpha_form    = fem.form((alpha - alpha_old_iter) ** 2 * dx)
 
-    # -------------------------------------------------------------------------
-    # Variational equations
-    # -------------------------------------------------------------------------
     u_test     = ufl.TestFunction(V_u)
     alpha_test = ufl.TestFunction(V_alpha)
 
     Res_u_qs     = ufl.derivative(potential_energy, u, u_test)
     Res_alpha_qs = ufl.derivative(potential_energy + fracture_energy, alpha, alpha_test)
-
     if physics == "1D":
         inertia_term = eta_c ** 2 * a_new * u_test * dx
     else:
         inertia_term = eta_c ** 2 * ufl.dot(a_new, u_test) * dx
-
     Res_acc = inertia_term + ufl.derivative(potential_energy, u, u_test)
 
-    # -------------------------------------------------------------------------
-    # Loading ramp
-    # -------------------------------------------------------------------------
     U_fn, V_fn, A_fn = _make_displacement_loader(loading_parameters)
 
     # -------------------------------------------------------------------------
-    # Quasi-static SNES
+    # SNES setup (QS)
     # -------------------------------------------------------------------------
     J_u_qs     = ufl.derivative(Res_u_qs,     u,     ufl.TrialFunction(V_u))
     J_alpha_qs = ufl.derivative(Res_alpha_qs, alpha, ufl.TrialFunction(V_alpha))
-
     elastic_problem_qs = SNESProblem(Res_u_qs,     u,     bcs_u,     J=J_u_qs)
     damage_problem_qs  = SNESProblem(Res_alpha_qs, alpha, bcs_alpha, J=J_alpha_qs)
     solver_u_qs     = make_linear_snes(elastic_problem_qs, V_u)
     solver_alpha_qs = make_damage_snes(damage_problem_qs,  alpha_lb, alpha_ub)
 
     # -------------------------------------------------------------------------
-    # Quasi-static loop
+    # Quasi-static loop -- while max(alpha) < alpha_break and t < t_max
     # -------------------------------------------------------------------------
     u.x.array[:] = 0.0; v.x.array[:] = 0.0; a.x.array[:] = 0.0
-    alpha.x.array[:]    = 0.0
+    alpha.x.array[:] = 0.0
     alpha_lb.x.array[:] = 0.0
     alpha_ub.x.array[:] = 1.0
 
     qs = {"t": [], "U": [], "F": [], "P_el": [], "P_f": [], "S": [], "total": []}
-    t_grid_qs = np.linspace(0.0, 1.0, n_qs + 1)[1:]
+    dt_qs = 1.0 / n_qs
+    n_qs_max = max(1, int(np.ceil(t_max / dt_qs)))
+    pbar_qs = tqdm(total=n_qs_max,
+                   desc=f"QS  [{physics}|{model_name}]",
+                   dynamic_ncols=True,
+                   disable=not (verbose and comm.rank == 0))
 
-    qs_iter = (
-        tqdm(t_grid_qs, desc=f"QS  [{physics}|{model_name}]",
-             total=n_qs, dynamic_ncols=True, disable=not (verbose and comm.rank == 0))
-        if verbose else t_grid_qs
-    )
-    for ti in qs_iter:
-        u_right_val.value = float(U_fn(ti))
+    t_cur = 0.0
+    while t_cur + 1e-12 < t_max:
+        t_cur += dt_qs
+        u_right_val.value = float(U_fn(t_cur))
         n_alt = alt_min_loop(solver_u_qs, u.x.petsc_vec,
                              solver_alpha_qs, alpha,
                              alpha_old_iter, error_L2_alpha_form,
                              AltMin_parameters["max_iter"], AltMin_parameters["tol"],
                              comm_=domain.comm)
         alpha_lb.x.array[:] = alpha.x.array
-        if hasattr(qs_iter, "set_postfix"):
-            alpha_max = float(domain.comm.allreduce(alpha.x.array.max(), op=MPI.MAX))
-            qs_iter.set_postfix(U=f"{float(u_right_val.value):.3f}",
-                                a_max=f"{alpha_max:.3f}", altmin=n_alt)
 
-        qs["t"].append(float(ti))
+        qs["t"].append(float(t_cur))
         qs["U"].append(float(u_right_val.value))
         qs["F"].append(domain.comm.allreduce(fem.assemble_scalar(reaction_right_form),  op=MPI.SUM))
         qs["P_el"].append(domain.comm.allreduce(fem.assemble_scalar(strain_energy_form),     op=MPI.SUM))
@@ -337,12 +294,20 @@ def run_problem(
         qs["S"].append(domain.comm.allreduce(fem.assemble_scalar(fracture_energy_form),     op=MPI.SUM))
         qs["total"].append(qs["P_el"][-1] + qs["P_f"][-1] + qs["S"][-1])
 
+        a_max = _alpha_max(alpha, domain.comm)
+        pbar_qs.update(1)
+        pbar_qs.set_postfix(t=f"{t_cur:.3f}", U=f"{float(u_right_val.value):.3f}",
+                            a_max=f"{a_max:.3f}", altmin=n_alt)
+        if a_max >= alpha_break:
+            break
+    pbar_qs.close()
+
     alpha_qs_final = alpha.x.array.copy()
     for k in qs:
         qs[k] = np.asarray(qs[k])
 
     # -------------------------------------------------------------------------
-    # Dynamic (Newmark) SNES
+    # SNES setup (Dyn)
     # -------------------------------------------------------------------------
     beta_v  = Newmark_parameters["beta"]
     gamma_v = Newmark_parameters["gamma"]
@@ -363,7 +328,9 @@ def run_problem(
 
     delta_t_c.value = 1.0 / n_dyn
 
-    # Re-initialise
+    # -------------------------------------------------------------------------
+    # Dynamic loop -- while max(alpha) < alpha_break and t < t_max
+    # -------------------------------------------------------------------------
     for fn in (u, u_new, v, v_new, a, a_new):
         fn.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
@@ -371,21 +338,21 @@ def run_problem(
     alpha_ub.x.array[:] = 1.0
 
     dyn = {"t": [], "U": [], "F": [], "K": [], "P_el": [], "P_f": [], "S": [], "total": []}
-
-    # Time-history for Paraview
-    N_snap = loading_parameters.get("N_snapshots", 6)
-    snap_idx_dyn = set(np.unique(np.linspace(0, n_dyn - 1, N_snap, dtype=int)).tolist())
     paraview_alpha = []
     paraview_u     = []
 
-    dt    = 1.0 / n_dyn
+    dt = 1.0 / n_dyn
+    n_dyn_max = max(1, int(np.ceil(t_max / dt)))
+    snap_every = max(1, n_dyn_max // max(1, N_snap))
+    pbar_dyn = tqdm(total=n_dyn_max,
+                    desc=f"Dyn [{physics}|{model_name}]",
+                    dynamic_ncols=True,
+                    disable=not (verbose and comm.rank == 0))
+
     t_cur = 0.0
-    dyn_iter = (
-        tqdm(range(n_dyn), desc=f"Dyn [{physics}|{model_name}]",
-             total=n_dyn, dynamic_ncols=True, disable=not (verbose and comm.rank == 0))
-        if verbose else range(n_dyn)
-    )
-    for step in dyn_iter:
+    step  = 0
+    while t_cur + 1e-12 < t_max:
+        step += 1
         t_cur += dt
         u_right_val.value = float(U_fn(t_cur))
         v_right_val.value = float(V_fn(t_cur))
@@ -397,7 +364,6 @@ def run_problem(
                              AltMin_parameters["max_iter"], AltMin_parameters["tol"],
                              comm_=domain.comm)
 
-        # Newmark update
         u_new.x.array[:] = (
             u.x.array
             + dt * v.x.array
@@ -426,7 +392,13 @@ def run_problem(
         dyn["S"].append(domain.comm.allreduce(fem.assemble_scalar(fracture_energy_form),     op=MPI.SUM))
         dyn["total"].append(dyn["K"][-1] + dyn["P_el"][-1] + dyn["P_f"][-1] + dyn["S"][-1])
 
-        if step in snap_idx_dyn and paraview:
+        a_max = _alpha_max(alpha, domain.comm)
+        pbar_dyn.update(1)
+        pbar_dyn.set_postfix(t=f"{t_cur:.3f}", U=f"{float(u_right_val.value):.3f}",
+                             K=f"{dyn['K'][-1]:.2e}",
+                             a_max=f"{a_max:.3f}", altmin=n_alt)
+
+        if paraview and (step % snap_every == 0 or a_max >= alpha_break):
             alpha_snap = fem.Function(V_alpha, name="Damage")
             alpha_snap.x.array[:] = alpha.x.array
             paraview_alpha.append((t_cur, alpha_snap))
@@ -434,22 +406,16 @@ def run_problem(
             u_snap.x.array[:] = u.x.array
             paraview_u.append((t_cur, u_snap))
 
-        if hasattr(dyn_iter, "set_postfix"):
-            alpha_max = float(domain.comm.allreduce(alpha.x.array.max(), op=MPI.MAX))
-            dyn_iter.set_postfix(U=f"{float(u_right_val.value):.3f}",
-                                 K=f"{dyn['K'][-1]:.2e}",
-                                 a_max=f"{alpha_max:.3f}", altmin=n_alt)
+        if a_max >= alpha_break:
+            break
+    pbar_dyn.close()
 
     alpha_dyn_final = alpha.x.array.copy()
     for k in dyn:
         dyn[k] = np.asarray(dyn[k])
 
-    # Coordinates of the damage dofs (used by plotters)
     x_alpha = V_alpha.tabulate_dof_coordinates()[:, 0]
 
-    # -------------------------------------------------------------------------
-    # House-keeping and post-processing
-    # -------------------------------------------------------------------------
     for s in (solver_u_qs, solver_alpha_qs, solver_acc, solver_alpha_dyn):
         s.destroy()
 
@@ -495,9 +461,7 @@ if __name__ == "__main__":
     # ----- edit *here* to switch model / physics --------------------------
     cfg["solver_parameters"]["model"]   = "AT2"        # "AT1" or "AT2"
     cfg["mesh_parameters"]["physics"]   = "2D"         # "1D"  or "2D"
-    # 2D-only settings (ignored in 1D):
-    cfg["mesh_parameters"]["nx"]        = 50
-    cfg["mesh_parameters"]["ny"]        = 20
+    cfg["mesh_parameters"]["mesh_per_lhat"] = 2        # cells per l_hat
     # ----------------------------------------------------------------------
 
     run_problem(**cfg)
