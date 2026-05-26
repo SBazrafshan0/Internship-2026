@@ -405,10 +405,10 @@ if __name__ == "__main__":
 
     # ----- edit *here* to switch model / physics --------------------------
     cfg["solver_parameters"]["model"]   = "AT2"        # "AT1" or "AT2"
-    cfg["mesh_parameters"]["physics"]   = "2D"         # "1D"  or "2D"
+    cfg["mesh_parameters"]["physics"]   = "1D"         # "1D"  or "2D"
     # 2D-only:
     cfg["mesh_parameters"]["nx"]        = 50
-    cfg["mesh_parameters"]["ny"]        = 10
+    cfg["mesh_parameters"]["ny"]        = 20
     # ----------------------------------------------------------------------
 
     run_problem(**cfg)

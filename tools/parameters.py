@@ -71,7 +71,7 @@ DEFAULT_MESH_PARAMETERS = {
     "nx": 200,
     "ny": None,               # 2D only; falls back to nx when None
     "Lx": 1.0,
-    "Ly": 1.0,
+    "Ly": 0.2,
 }
 
 DEFAULT_MECH_LOADING = {
@@ -83,7 +83,7 @@ DEFAULT_MECH_LOADING = {
 }
 
 DEFAULT_THERM_LOADING = {
-    "theta_max":  4.0,
+    "theta_max":  1.75,
     "T0":         1.0,
     "N_steps_qs":  60,
     "N_steps_dyn": 180,

@@ -497,7 +497,7 @@ if __name__ == "__main__":
     cfg["mesh_parameters"]["physics"]   = "2D"         # "1D"  or "2D"
     # 2D-only settings (ignored in 1D):
     cfg["mesh_parameters"]["nx"]        = 50
-    cfg["mesh_parameters"]["ny"]        = 10
+    cfg["mesh_parameters"]["ny"]        = 20
     # ----------------------------------------------------------------------
 
     run_problem(**cfg)
