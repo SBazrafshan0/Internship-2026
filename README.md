@@ -24,6 +24,96 @@ fragmentation_repo/
 ```
 
 
+
+## Installation
+
+The code relies on **FEniCSx 0.7+** (`dolfinx`, `ufl`, `petsc4py`, `mpi4py`),
+plus a handful of Python packages.  Pick the install path that matches your
+operating system; *Linux / macOS via conda-forge is the recommended route*
+and the one we test against.  Native Windows is not supported by FEniCSx --
+use WSL2.
+
+### Required packages (summary)
+
+| Package        | Purpose                              |
+|----------------|--------------------------------------|
+| `fenics-dolfinx` | FEM (mesh, function spaces, forms) |
+| `mpi4py`         | MPI bindings                       |
+| `petsc4py`       | linear/nonlinear solvers (SNES)    |
+| `python-gmsh`    | unstructured 2D triangulation      |
+| `numpy`, `sympy`, `matplotlib` | numerics + plotting  |
+| `joblib`         | parallel sweeps over CPU cores     |
+| `tqdm`           | progress bars during long runs     |
+| `jupyter`        | only for the theory notebooks      |
+
+### A. Linux (Ubuntu / Debian / WSL2) -- conda-forge
+
+```bash
+# 1. miniconda / mambaforge if you don't have it yet:
+#    https://github.com/conda-forge/miniforge
+
+conda create -n fenicsx-env -c conda-forge \
+    fenics-dolfinx mpich python-gmsh \
+    numpy sympy matplotlib joblib tqdm jupyter
+conda activate fenicsx-env
+
+# 2. clone & run
+git clone <this-repo> && cd fragmentation_repo
+python problems/dynamic.py
+```
+
+### B. macOS -- conda-forge
+
+Same command as A.  Use `openmpi` instead of `mpich` if Apple-Silicon gives
+you trouble:
+
+```bash
+conda create -n fenicsx-env -c conda-forge \
+    fenics-dolfinx openmpi python-gmsh \
+    numpy sympy matplotlib joblib tqdm jupyter
+conda activate fenicsx-env
+```
+
+### C. Windows -- WSL2 + conda-forge
+
+FEniCSx does **not** run natively on Windows.  The recommended path is
+WSL2 (Windows Subsystem for Linux):
+
+1. Open PowerShell as administrator and install WSL Ubuntu:
+   ```powershell
+   wsl --install -d Ubuntu
+   ```
+2. Reboot, finish the Ubuntu setup, then **inside the Ubuntu shell** follow
+   recipe A above.
+3. Edit the repo from VS Code with the *"Remote -- WSL"* extension so that
+   you keep a native-Windows editor while the code runs in Linux.
+
+### D. Docker (any OS) -- one-shot
+
+```bash
+docker run -it --rm -v "$PWD":/work -w /work dolfinx/dolfinx:stable bash
+# now inside the container:
+pip install --break-system-packages joblib tqdm gmsh
+python problems/dynamic.py
+```
+
+### E. HPC clusters
+
+Most centres already provide a FEniCSx module.  Load it, then in your
+user-site `pip install --user joblib tqdm gmsh`.  Launch single runs with
+`srun python problems/dynamic.py`, sweeps with `python sweep.py` (joblib
+will use the cores you allocated).
+
+### Verifying the install
+
+```bash
+python -c "import dolfinx, ufl, mpi4py, petsc4py, gmsh, joblib, tqdm; \
+           print('dolfinx', dolfinx.__version__)"
+```
+
+A line ending with `dolfinx 0.7.x` (or newer) means you're ready to run.
+
+
 ## How to run
 
 ### A. one isolated run
