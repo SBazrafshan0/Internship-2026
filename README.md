@@ -13,10 +13,8 @@ fragmentation_repo/
 │   └── thermal_theory.ipynb      <- theory + numerical scheme
 │
 ├── tools/                        <- LIBRARY CODE -- NEVER edit during a run
-│   ├── __init__.py
-│   ├── imports.py                <- centralised third-party imports (FEniCSx,
-│   │                                PETSc, matplotlib, joblib, tqdm ...)
-│   ├── helpers.py                <- SNESProblem + AltMin loop + mesh info
+│   ├── imports.py                <- centralised third-party imports
+│   ├── helpers.py                <- SNES wrapper + AltMin loop + mesh info
 │   ├── parameters.py             <- default parameter dictionaries
 │   ├── solvers.py                <- AT1, AT2 fracture-energy densities
 │   ├── meshing.py                <- 1D interval / 2D Gmsh unstructured mesh
@@ -25,98 +23,137 @@ fragmentation_repo/
 └── output/{png,pdf,paraview}/
 ```
 
-## Single mesh-resolution knob: `mesh_per_lhat`
 
-The mesh cell size is set automatically from the regularisation length:
+## How to run
+
+### A. one isolated run
+
+The two problem files are *self-contained scripts*.  Open the file you want
+to run, edit the three switches at the bottom (`model`, `physics`,
+`mesh_per_lhat`) and launch it:
+
+```bash
+python problems/dynamic.py          # mechanical test, one set of parameters
+python problems/thermal.py          # thermal test
+```
+
+The figure header and the file name encode the full parameter set, so you
+cannot silently overwrite a previous run.
+
+### B. parameter sweep
+
+`sweep.py` farms many independent runs out to joblib (one CPU per FEM
+problem).  It runs **one problem at a time**, controlled by a single
+constant at the top of the file:
+
+```python
+PROBLEM = "dynamic"   # "dynamic" or "thermal" or any key of PROBLEMS
+```
+
+Then either:
+
+```bash
+python sweep.py                     # uses whatever PROBLEM is set to
+python sweep.py thermal             # one-off override of the default
+```
+
+To add a new problem `myproblem`:
+
+1. Create `problems/myproblem.py` (copy `dynamic.py` as a template, change
+   `_PROBLEM_SHAPE` if you need a different geometry).
+2. Register it in `problems/__init__.py`:
+   ```python
+   from .myproblem import run_problem as run_myproblem
+   PROBLEMS["myproblem"] = run_myproblem
+   ```
+3. Set `PROBLEM = "myproblem"` in `sweep.py`.
+4. `python sweep.py`.
+
+### C. parallelism
+
+```bash
+# inter-problem (sweeps): one joblib worker per FEM problem
+COWORK_N_WORKERS=8 python sweep.py
+
+# intra-problem (one big FEM problem on multiple cores)
+mpirun -n 4 python problems/dynamic.py
+```
+
+The two should *not* be combined.  When the driver is launched under
+`mpirun`, joblib is bypassed automatically.
+
+
+## Key conventions
+
+### Mesh resolution -- single knob
+
+The cell size is set from the regularisation length:
 
     h = l_hat / mesh_per_lhat
 
-There is **no** `nx`/`ny` to tweak by hand.  Pick `mesh_per_lhat = 4` to be
-safe (four cells across a diffuse crack band), increase to 6-8 for
-publication-quality patterns.
+so `mesh_per_lhat = 5` gives 5 cells across one internal length.  There is
+**no** `nx`/`ny` to set by hand.  In 2D, Gmsh generates an unstructured
+triangulation with that characteristic length.
 
-* 1D -- `dolfinx.mesh.create_interval` with `nx = ceil(Lx / h)`.
-* 2D -- **Gmsh** generates an unstructured triangulation with characteristic
-  length `h`.  If Gmsh is not importable, the factory falls back to a
-  crossed-diagonal structured triangular mesh.
+### Stopping criterion -- damage hits 1
 
-## Stopping criterion: damage at `alpha=1`
+Both the QS and dynamic loops are `while` loops that step until any damage
+point reaches `alpha_break` (default 0.99), with a safety cap `t_max`
+(default 3.0) to prevent infinite loops in the sub-critical regime.
 
-Both the QS loop and the dynamic loop are *while* loops that step until any
-damage point reaches `alpha_break` (default 0.99) -- no fixed step count.
-A safety cap `t_max` (default 3.0) prevents infinite loops in the
-sub-critical regime where no crack ever nucleates.
+### Geometry
 
-The progress bar shows live `t`, `a_max`, `K` and AltMin iterations so you
-can follow the run.
+The default geometry is a rectangle with `Lx = 1.0`, `Ly = 0.2` (a thin
+strip), defined in `tools/parameters.py` and overridable from
+`sweep.BASE_OVERRIDES`.  The *shape name* (e.g. `"rectangle"`,
+`"plate_with_hole"`, ...) is **not** a user-facing knob: each problem file
+pins its own shape via the module-level constant `_PROBLEM_SHAPE`.  Need a
+different geometry?  Write a new problem file rather than tweaking an
+existing one, and register a new builder in
+`tools.meshing.GEOMETRY_BUILDERS`.
 
-## Switches
-
-Every problem file has, at the bottom, exactly the same block:
-
-    cfg["solver_parameters"]["model"]      = "AT1" | "AT2"
-    cfg["mesh_parameters"]["physics"]      = "1D"  | "2D"
-    cfg["mesh_parameters"]["shape"]        = "rectangle"
-    cfg["mesh_parameters"]["mesh_per_lhat"] = 5
-
-Edit, save, run.  If a new problem cannot live under these switches, *write
-a new file* in `problems/` rather than overloading an existing one.
-
-## Adding a new shape
-
-Append a Gmsh builder to `tools.meshing.GEOMETRY_BUILDERS`:
+### Switches at the bottom of each problem file
 
 ```python
-GEOMETRY_BUILDERS["L_shape"] = lambda mp, lc: _gmsh_l_shape(mp, lc)
+cfg["solver_parameters"]["model"]      = "AT1" | "AT2"
+cfg["mesh_parameters"]["physics"]      = "1D"  | "2D"
+cfg["mesh_parameters"]["mesh_per_lhat"] = 5
 ```
 
-Use the same boundary-tag convention: 1=left, 2=right, 3=bottom, 4=top.
-All problem files keep working as long as `mt.find(1)` and `mt.find(2)`
-still mean the loaded/clamped edges.
+Anything else (`U_max`, `Lambda`, `eta`, ...) is read from the defaults in
+`tools/parameters.py` -- override it inside `__main__` or via
+`BASE_OVERRIDES` in `sweep.py`.
 
-## Adding a new model
+### Paraview output
+
+`tools.plotting.export_paraview` writes an XDMF time series of `alpha` and
+`u`.  In 2D this is *the* way to look at the crack pattern.  In **1D** the
+output is redundant (matplotlib already shows the damage profile), so
+the Paraview export is **skipped automatically** when `physics == "1D"`.
+You don't need to do anything -- 1D runs produce only PNG/PDF.
+
+### Output file names
+
+A run with `l_hat=0.02, Lambda=10, eta=0.01, AT2, 2D, mesh_per_lhat=5,
+U_max=1.4, T0=1, N_qs=60, N_dyn=180` writes:
+
+```
+output/png/mechanical_2D_rectangle_AT2_lhat0.02_lam10.0_eta0.01_umax1.40_nQS60_nDyn180_mpl5_T01.0.png
+output/pdf/...
+output/paraview/...xdmf   (only when physics == 2D)
+```
+
+
+## Adding a new fracture model
 
 Append to `tools.solvers.MODELS`:
 
 ```python
-MODELS["my_model"] = {"w": lambda a: a**3, "c_w": 4.0, "description": "..."}
+MODELS["my_model"] = {
+    "w":   lambda a: a**3,
+    "c_w": 4.0,
+    "description": "...",
+}
 ```
 
-## How to run
-
-```bash
-# single run
-python problems/dynamic.py
-python problems/thermal.py
-
-# sweep -- ONE problem at a time
-python sweep.py dynamic
-python sweep.py thermal
-
-# parallel sweep
-COWORK_N_WORKERS=8 python sweep.py thermal
-
-# intra-problem MPI parallelism
-mpirun -n 4 python problems/dynamic.py
-```
-
-## File-name convention
-
-Outputs land in `output/{png,pdf,paraview}/` with a fully qualified stem:
-
-```
-mechanical_2D_rectangle_AT2_lhat0.02_lam10.0_eta0.01_umax1.40_nQS60_nDyn180_mpl5_T01.0.{png,pdf,xdmf}
-```
-
-so two runs cannot silently overwrite each other.
-
-## Parallelism
-
-* **MPI / FEniCSx** -- intra-problem domain decomposition.  Prepend
-  `mpirun -n N` to the command.  Useful for big 2D meshes.
-* **joblib** -- inter-problem parallelism in the sweep driver.  Each
-  worker takes one independent FEM problem from the queue.  Override the
-  worker count with `COWORK_N_WORKERS=<N>`.
-
-The two should *not* be combined.  When `comm.size > 1`, joblib falls back
-to a serial loop on each rank to avoid oversubscription.
+All problem and sweep files pick it up automatically.

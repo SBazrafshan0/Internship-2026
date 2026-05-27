@@ -453,7 +453,7 @@ def run_problem(
             print(f"  saved {png}")
             print(f"        {pdf}")
 
-    if paraview and comm.rank == 0:
+    if paraview and physics == "2D" and comm.rank == 0:
         xdmf = export_paraview(domain, paraview_alpha, paraview_u,
                                "mechanical",
                                model_parameters, mesh_parameters,
