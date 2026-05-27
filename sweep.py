@@ -7,12 +7,13 @@ Usage
 -----
 ::
 
-    python sweep.py dynamic        # sweep over the mechanical/dynamic problem
-    python sweep.py thermal        # sweep over the thermal problem
+    python sweep.py                # sweep the problem named in PROBLEM
+    python sweep.py thermal        # one-off override of the default
 
-The driver requires *exactly one* problem name; there is intentionally no
-"both" shortcut, so you cannot accidentally launch two sweeps in one
-command.
+The problem to sweep is set by editing the ``PROBLEM`` constant near the top
+of this file -- this way, adding a new problem in ``problems/`` and pointing
+the sweep at it requires changing a single line.  There is intentionally no
+"both" shortcut, so two sweeps cannot be launched by accident.
 
 Configuration
 -------------
@@ -51,6 +52,12 @@ from problems import PROBLEMS
 # =============================================================================
 # Sweep configuration -- *EDIT HERE*
 # =============================================================================
+# Which problem the sweep targets.  Change this single line when you add a new
+# problem to problems/__init__.py -- no other edits needed.  You can also pass
+# the problem name on the command line to override this default:
+#     python sweep.py thermal
+PROBLEM = "dynamic"          # "dynamic" or "thermal" or any key of PROBLEMS
+
 SWEEP = {
     "l_hat":   [0.01, 0.02, 0.04, 0.08],
     "Lambda":  [1.0, 10.0, 20.0, 50.0],
@@ -63,7 +70,6 @@ SWEEP = {
 BASE_OVERRIDES = {
     "mesh_parameters": {
         "mesh_per_lhat": 5,        # cells per regularisation length
-        "shape":         "rectangle",
         "Lx":            1.0,
         "Ly":            1.0,
     },
@@ -161,16 +167,23 @@ def run_sweep(problem_name: str):
 # CLI
 # =============================================================================
 USAGE = (
-    "Usage: python sweep.py <problem>\n"
-    f"  <problem> is one of: {sorted(PROBLEMS)}\n"
-    "Only one problem at a time -- there is no 'both' option."
+    "Usage:\n"
+    "  python sweep.py            -- sweep the problem named in the PROBLEM constant\n"
+    "  python sweep.py <problem>  -- override the default once\n"
+    f"<problem> is one of: {sorted(PROBLEMS)}\n"
+    "(Only one problem at a time -- there is no 'both' option.)"
 )
 
 
 def main():
-    if len(sys.argv) != 2:
+    # Resolution order: CLI argument (if any) > module-level PROBLEM constant.
+    if len(sys.argv) == 1:
+        target = PROBLEM
+    elif len(sys.argv) == 2:
+        target = sys.argv[1].strip().lower()
+    else:
         raise SystemExit(USAGE)
-    target = sys.argv[1].strip().lower()
+
     if target in {"both", "all"}:
         raise SystemExit(
             "sweep.py runs one problem at a time -- please pick exactly one of: "

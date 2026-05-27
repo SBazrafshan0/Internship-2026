@@ -72,7 +72,7 @@ DEFAULT_MESH_PARAMETERS = {
     "shape":         "rectangle",   # any key registered in GEOMETRY_BUILDERS
     "mesh_per_lhat": 4,             # cells per regularisation length
     "Lx":            1.0,
-    "Ly":            0.2,
+    "Ly":            1.0,
 }
 
 DEFAULT_MECH_LOADING = {

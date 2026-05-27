@@ -56,6 +56,16 @@ from tools.plotting  import (
 
 
 # =============================================================================
+# Problem-specific geometry  (lives in tools.meshing.GEOMETRY_BUILDERS)
+# =============================================================================
+# Geometry of this problem.  Hard-coded here on purpose: if you ever need a
+# different shape (notched bar, L-shape, plate-with-hole, ...), do NOT edit
+# this file -- write a new file in problems/ that uses a different value
+# from tools.meshing.GEOMETRY_BUILDERS instead.
+_PROBLEM_SHAPE = "rectangle"
+
+
+# =============================================================================
 # Loading ramp
 # =============================================================================
 def _make_displacement_loader(loading_parameters):
@@ -103,6 +113,9 @@ def run_problem(
     verbose: bool = True,
 ) -> dict:
     """Run one *quasi-static + dynamic* mechanical simulation."""
+    # Geometry is a property of the *problem*, not a user-tunable knob.
+    mesh_parameters["shape"] = _PROBLEM_SHAPE
+
     physics    = mesh_parameters["physics"]
     model_name = solver_parameters["model"]
     n_qs       = loading_parameters["N_steps_qs"]
@@ -460,8 +473,8 @@ if __name__ == "__main__":
 
     # ----- edit *here* to switch model / physics --------------------------
     cfg["solver_parameters"]["model"]   = "AT2"        # "AT1" or "AT2"
-    cfg["mesh_parameters"]["physics"]   = "2D"         # "1D"  or "2D"
-    cfg["mesh_parameters"]["mesh_per_lhat"] = 2        # cells per l_hat
+    cfg["mesh_parameters"]["physics"]   = "1D"         # "1D"  or "2D"
+    cfg["mesh_parameters"]["mesh_per_lhat"] = 5        # cells per l_hat
     # ----------------------------------------------------------------------
 
     run_problem(**cfg)
