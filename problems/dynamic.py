@@ -260,11 +260,9 @@ def run_problem(
         strain_e_density         = 0.5 * g * E_c * eps ** 2
         foundation_e_density     = 0.5 * Lambda_c ** 2 * u ** 2
         kinetic_e_density        = 0.5 * v ** 2
-        # c1: local velocity, c2: strain-rate, c3: full velocity-gradient filter
-        dissipated_power_density = 0.5 * (c1_c * v ** 2
-                                          + c2_c * E_c * eps_v ** 2
-                                          + c3_c * ufl.inner(ufl.grad(v), ufl.grad(v)))
-        # c3 is a weak-form filter only -- it is NOT reported as a Cauchy stress
+        # c1: local velocity damping, c2: Kelvin-Voigt strain-rate damping
+        # c3 damps the damage rate and enters the damage sub-problem only (not here)
+        dissipated_power_density = 0.5 * (c1_c * v ** 2 + c2_c * E_c * eps_v ** 2)
         reaction_form_expr       = g * E_c * eps + c2_c * E_c * eps_v
     else:
         eps     = strain(u, "2D")
@@ -278,13 +276,12 @@ def run_problem(
 
         # The viscous energy term is defined such that its time derivative gives the dissipated power density.  In particular, the contribution from the c2 term is chosen so that when you take the time derivative, you get a term of the form c2 * (lmbda_c * tr(eps) * tr(eps_v) + 2 * mu_c * inner(eps, eps_v)), which matches the form of sigma_vis below and ensures that the viscous stress contributes correctly to the dissipated power.
         viscous_energy_term      = 0.5 * lmbda_c * ufl.tr(eps_v)**2 + mu_c * ufl.inner(eps_v, eps_v)
-        # c1: local velocity, c2: strain-rate, c3: full velocity-gradient high-order filter
-        dissipated_power_density = (0.5 * c1_c * ufl.dot(v, v)
-                                    + c2_c * viscous_energy_term
-                                    + 0.5 * c3_c * ufl.inner(ufl.grad(v), ufl.grad(v)))
+        # c1: local velocity damping, c2: Kelvin-Voigt strain-rate damping
+        # c3 damps the damage rate and enters the damage sub-problem only (not here)
+        dissipated_power_density = (0.5 * c1_c * ufl.dot(v, v) + c2_c * viscous_energy_term)
 
-        # Total stress is elastic + viscous (c2 only).  The c3 gradient term is a
-        # weak-form filter and is deliberately NOT included in the Cauchy stress.
+        # Total stress is elastic + viscous (c2 only); c3 acts on the damage field
+        # and is not reported as a Cauchy stress.
         # The reaction force on the right edge is the normal component of the total
         # stress, which here reduces to the xx component since the normal is (1,0).
         sigma_el  = g * (lmbda_c * ufl.tr(eps) * ufl.Identity(domain.geometry.dim) + 2.0 * mu_c * eps)
@@ -309,6 +306,10 @@ def run_problem(
     dissipated_power_form  = fem.form(dissipated_power)
     reaction_right_form    = fem.form(reaction_form_expr * ds(2))
     error_L2_alpha_form    = fem.form((alpha - alpha_old_iter) ** 2 * dx)
+
+    # c3 damage-rate dissipation tracked separately (alpha_rate = (alpha-alpha_lb)/dt)
+    alpha_rate = fem.Function(V_alpha)
+    dissipated_power_alpha_form = fem.form(0.5 * c3_c * alpha_rate * alpha_rate * dx)
 
     u_test     = ufl.TestFunction(V_u)
     alpha_test = ufl.TestFunction(V_alpha)
@@ -412,7 +413,10 @@ def run_problem(
         u: u_newmark(u, v, a, a_new, delta_t_c),
         v: v_newmark(v,    a, a_new, delta_t_c),
     })
-    Res_alpha_dyn   = ufl.replace(Res_alpha_qs, {u: u_newmark(u, v, a, a_new, delta_t_c)})
+    # c3 damage-rate term: D_alpha Q[alpha_hat] = int c3 * alpha_dot * alpha_hat dx
+    # with alpha_dot ~ (alpha - alpha_lb) / dt
+    Res_alpha_dyn   = (ufl.replace(Res_alpha_qs, {u: u_newmark(u, v, a, a_new, delta_t_c)})
+                       + c3_c / delta_t_c * (alpha - alpha_lb) * alpha_test * dx)
 
     J_acc_newmark = ufl.derivative(Res_acc_newmark, a_new, ufl.TrialFunction(V_u))
     J_alpha_dyn   = ufl.derivative(Res_alpha_dyn,   alpha, ufl.TrialFunction(V_alpha))
@@ -485,6 +489,7 @@ def run_problem(
         u.x.array[:] = u_new.x.array
         v.x.array[:] = v_new.x.array
         a.x.array[:] = a_new.x.array
+        alpha_rate.x.array[:] = (alpha.x.array - alpha_lb.x.array) / dt
         alpha_lb.x.array[:] = alpha.x.array
 
         dyn["t"].append(t_cur)
@@ -495,10 +500,9 @@ def run_problem(
         dyn["P_el"].append(domain.comm.allreduce(fem.assemble_scalar(strain_energy_form),     op=MPI.SUM))
         dyn["P_f"].append(domain.comm.allreduce(fem.assemble_scalar(foundation_energy_form), op=MPI.SUM))
         dyn["S"].append(domain.comm.allreduce(fem.assemble_scalar(fracture_energy_form),     op=MPI.SUM))
-        # Cumulative dissipated energy: time integral of dissipated power
-        diss_power_now = domain.comm.allreduce(
-            fem.assemble_scalar(dissipated_power_form), op=MPI.SUM
-        )
+        # Cumulative dissipated energy: time integral of dissipated power (c1+c2 on u, c3 on alpha)
+        diss_power_now = (domain.comm.allreduce(fem.assemble_scalar(dissipated_power_form),       op=MPI.SUM)
+                        + domain.comm.allreduce(fem.assemble_scalar(dissipated_power_alpha_form), op=MPI.SUM))
         diss_energy += dt * float(diss_power_now)
         dyn["D"].append(diss_energy)
         # Stored dynamic total (K + P_el + P_f + S).  Dissipated energy D is a

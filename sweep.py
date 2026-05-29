@@ -65,9 +65,9 @@ SWEEP = {
     "N_qs":    [30],
     "model":   ["AT1", "AT2"],            # add "AT1" to sweep both
     "physics": ["1D", "2D"],             # add "2D" to sweep both
-    "c1":      [0.0, 1.0e-3],            # local-velocity damping
-    "c2":      [0.0, 1.0e-3],               # strain-rate damping (also a Cauchy stress component)
-    "c3":      [0.0, 1.0e-3],            # full velocity-gradient high-order filter (weak-form only)  
+    "c1":      [0.0, 1.0e-3, 1.0e-2],            # local-velocity damping
+    "c2":      [0.0, 1.0e-3, 1.0e-2],               # strain-rate damping (also a Cauchy stress component)
+    "c3":      [0.0, 1.0e-3, 1.0e-2],            # full velocity-gradient high-order filter (weak-form only)  
 }
 
 BASE_OVERRIDES = {

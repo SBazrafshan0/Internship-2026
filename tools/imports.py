@@ -89,12 +89,15 @@ except Exception:                                       # pragma: no cover
 
 
     class _DummyTQDM:
-        def __init__(self, total=None, desc="", **kw):
-            self.total = total or 0
-            self.desc  = desc
-            self.n     = 0
+        def __init__(self, total=None, desc="", disable=False, **kw):
+            self.total   = total or 0
+            self.desc    = desc
+            self.disable = disable
+            self.n       = 0
         def update(self, k=1):
             self.n += k
+            if self.disable:
+                return
             if self.total and (self.n == 1 or self.n == self.total
                                or self.n % max(1, self.total // 10) == 0):
                 pct = 100.0 * self.n / self.total

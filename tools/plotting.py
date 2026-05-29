@@ -334,10 +334,13 @@ def export_paraview(
     xdmf_path = Path(paths["paraview"]) / f"{stem}.xdmf"
     with io.XDMFFile(domain.comm, str(xdmf_path), "w") as xdmf:
         xdmf.write_mesh(domain)
-        for t, alpha in alpha_history:
-            xdmf.write_function(alpha, float(t))
-        for t, u in u_history:
-            xdmf.write_function(u, float(t))
+        if u_history:
+            for (t, alpha), (_, u) in zip(alpha_history, u_history):
+                xdmf.write_function(alpha, float(t))
+                xdmf.write_function(u, float(t))
+        else:
+            for t, alpha in alpha_history:
+                xdmf.write_function(alpha, float(t))
     return str(xdmf_path)
 
 
