@@ -1,0 +1,1096 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="https://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="mesh" GridType="Uniform">
+      <Topology TopologyType="Triangle" NumberOfElements="240" NodesPerElement="3">
+        <DataItem Dimensions="240 3" NumberType="Int" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Mesh/mesh/topology</DataItem>
+      </Topology>
+      <Geometry GeometryType="XY">
+        <DataItem Dimensions="153 2" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Mesh/mesh/geometry</DataItem>
+      </Geometry>
+    </Grid>
+    <Grid Name="Damage" GridType="Collection" CollectionType="Temporal">
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.16666666666666666" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_16666666666666666</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.33333333333333315" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_33333333333333315</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.49999999999999922" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_49999999999999922</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.59444444444444333" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_59444444444444333</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.59999999999999887" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_59999999999999887</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.6055555555555544" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_6055555555555544</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.61111111111110994" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_61111111111110994</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.61666666666666548" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_61666666666666548</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.62222222222222101" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_62222222222222101</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.62777777777777655" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_62777777777777655</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.63333333333333208" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_63333333333333208</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.63888888888888762" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_63888888888888762</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.64444444444444315" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_64444444444444315</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.64999999999999869" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_64999999999999869</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.65555555555555423" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_65555555555555423</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.66111111111110976" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_66111111111110976</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.6666666666666653" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_6666666666666653</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.67222222222222083" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_67222222222222083</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.67777777777777637" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_67777777777777637</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.6833333333333319" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_6833333333333319</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.68888888888888744" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_68888888888888744</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.69444444444444298" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_69444444444444298</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.69999999999999851" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_69999999999999851</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.70555555555555405" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_70555555555555405</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.71111111111110958" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_71111111111110958</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.71666666666666512" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_71666666666666512</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.72222222222222066" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_72222222222222066</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.72777777777777619" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_72777777777777619</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.73333333333333173" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_73333333333333173</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.73888888888888726" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_73888888888888726</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.7444444444444428" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_7444444444444428</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.74999999999999833" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_74999999999999833</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.75555555555555387" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_75555555555555387</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.76111111111110941" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_76111111111110941</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.76666666666666494" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_76666666666666494</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.77222222222222048" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_77222222222222048</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.77777777777777601" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_77777777777777601</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.78333333333333155" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_78333333333333155</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.78888888888888709" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_78888888888888709</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.79444444444444262" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_79444444444444262</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.79999999999999816" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_79999999999999816</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.80555555555555369" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_80555555555555369</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.81111111111110923" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_81111111111110923</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.81666666666666476" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_81666666666666476</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.8222222222222203" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_8222222222222203</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.82777777777777584" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_82777777777777584</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.83333333333333137" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_83333333333333137</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.83888888888888691" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_83888888888888691</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.84444444444444244" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_84444444444444244</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.84999999999999798" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_84999999999999798</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.85555555555555352" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_85555555555555352</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.86111111111110905" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_86111111111110905</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.86666666666666459" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_86666666666666459</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.87222222222222012" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_87222222222222012</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.87777777777777566" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_87777777777777566</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.88333333333333119" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_88333333333333119</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.88888888888888673" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_88888888888888673</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.89444444444444227" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_89444444444444227</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.8999999999999978" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_8999999999999978</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.90555555555555334" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_90555555555555334</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.91111111111110887" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_91111111111110887</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.91666666666666441" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_91666666666666441</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.92222222222221995" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_92222222222221995</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.92777777777777548" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_92777777777777548</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.93333333333333102" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_93333333333333102</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.93888888888888655" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_93888888888888655</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.94444444444444209" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_94444444444444209</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.94999999999999762" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_94999999999999762</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.95555555555555316" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_95555555555555316</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.9611111111111087" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_9611111111111087</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.96666666666666423" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_96666666666666423</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.97222222222221977" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_97222222222221977</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.9777777777777753" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_9777777777777753</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.98333333333333084" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_98333333333333084</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.98888888888888637" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_98888888888888637</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.99444444444444191" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_99444444444444191</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.99999999999999745" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="153 1" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Damage/0_99999999999999745</DataItem>
+        </Attribute>
+      </Grid>
+    </Grid>
+    <Grid Name="Displacement" GridType="Collection" CollectionType="Temporal">
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.16666666666666666" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_16666666666666666</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.33333333333333315" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_33333333333333315</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.49999999999999922" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_49999999999999922</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.59444444444444333" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_59444444444444333</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.59999999999999887" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_59999999999999887</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.6055555555555544" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_6055555555555544</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.61111111111110994" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_61111111111110994</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.61666666666666548" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_61666666666666548</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.62222222222222101" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_62222222222222101</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.62777777777777655" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_62777777777777655</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.63333333333333208" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_63333333333333208</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.63888888888888762" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_63888888888888762</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.64444444444444315" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_64444444444444315</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.64999999999999869" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_64999999999999869</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.65555555555555423" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_65555555555555423</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.66111111111110976" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_66111111111110976</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.6666666666666653" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_6666666666666653</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.67222222222222083" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_67222222222222083</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.67777777777777637" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_67777777777777637</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.6833333333333319" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_6833333333333319</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.68888888888888744" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_68888888888888744</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.69444444444444298" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_69444444444444298</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.69999999999999851" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_69999999999999851</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.70555555555555405" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_70555555555555405</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.71111111111110958" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_71111111111110958</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.71666666666666512" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_71666666666666512</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.72222222222222066" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_72222222222222066</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.72777777777777619" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_72777777777777619</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.73333333333333173" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_73333333333333173</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.73888888888888726" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_73888888888888726</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.7444444444444428" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_7444444444444428</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.74999999999999833" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_74999999999999833</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.75555555555555387" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_75555555555555387</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.76111111111110941" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_76111111111110941</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.76666666666666494" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_76666666666666494</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.77222222222222048" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_77222222222222048</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.77777777777777601" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_77777777777777601</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.78333333333333155" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_78333333333333155</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.78888888888888709" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_78888888888888709</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.79444444444444262" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_79444444444444262</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.79999999999999816" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_79999999999999816</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.80555555555555369" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_80555555555555369</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.81111111111110923" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_81111111111110923</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.81666666666666476" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_81666666666666476</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.8222222222222203" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_8222222222222203</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.82777777777777584" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_82777777777777584</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.83333333333333137" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_83333333333333137</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.83888888888888691" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_83888888888888691</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.84444444444444244" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_84444444444444244</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.84999999999999798" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_84999999999999798</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.85555555555555352" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_85555555555555352</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.86111111111110905" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_86111111111110905</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.86666666666666459" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_86666666666666459</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.87222222222222012" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_87222222222222012</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.87777777777777566" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_87777777777777566</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.88333333333333119" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_88333333333333119</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.88888888888888673" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_88888888888888673</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.89444444444444227" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_89444444444444227</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.8999999999999978" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_8999999999999978</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.90555555555555334" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_90555555555555334</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.91111111111110887" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_91111111111110887</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.91666666666666441" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_91666666666666441</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.92222222222221995" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_92222222222221995</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.92777777777777548" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_92777777777777548</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.93333333333333102" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_93333333333333102</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.93888888888888655" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_93888888888888655</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.94444444444444209" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_94444444444444209</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.94999999999999762" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_94999999999999762</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.95555555555555316" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_95555555555555316</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.9611111111111087" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_9611111111111087</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.96666666666666423" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_96666666666666423</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.97222222222221977" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_97222222222221977</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.9777777777777753" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_9777777777777753</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.98333333333333084" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_98333333333333084</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.98888888888888637" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_98888888888888637</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.99444444444444191" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_99444444444444191</DataItem>
+        </Attribute>
+      </Grid>
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.99999999999999745" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="153 3" Format="HDF">mechanical_2D_rectangle_AT1_lhat0.1_lam0.0_eta0.0001_umax1.50_nQS30_nDyn180_mpl3_T01.0.h5:/Function/Displacement/0_99999999999999745</DataItem>
+        </Attribute>
+      </Grid>
+    </Grid>
+  </Domain>
+</Xdmf>

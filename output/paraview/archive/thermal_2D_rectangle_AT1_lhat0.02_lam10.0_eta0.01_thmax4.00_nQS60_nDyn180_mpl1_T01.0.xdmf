@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0" xmlns:xi="https://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="mesh" GridType="Uniform">
+      <Topology TopologyType="Triangle" NumberOfElements="10000" NodesPerElement="3">
+        <DataItem Dimensions="10000 3" NumberType="Int" Format="HDF">thermal_2D_rectangle_AT1_lhat0.02_lam10.0_eta0.01_thmax4.00_nQS60_nDyn180_mpl1_T01.0.h5:/Mesh/mesh/topology</DataItem>
+      </Topology>
+      <Geometry GeometryType="XY">
+        <DataItem Dimensions="5101 2" Format="HDF">thermal_2D_rectangle_AT1_lhat0.02_lam10.0_eta0.01_thmax4.00_nQS60_nDyn180_mpl1_T01.0.h5:/Mesh/mesh/geometry</DataItem>
+      </Geometry>
+    </Grid>
+    <Grid Name="Damage" GridType="Collection" CollectionType="Temporal">
+      <Grid Name="Damage" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.33888888888888868" />
+        <Attribute Name="Damage" AttributeType="Scalar" Center="Node">
+          <DataItem Dimensions="5101 1" Format="HDF">thermal_2D_rectangle_AT1_lhat0.02_lam10.0_eta0.01_thmax4.00_nQS60_nDyn180_mpl1_T01.0.h5:/Function/Damage/0_33888888888888868</DataItem>
+        </Attribute>
+      </Grid>
+    </Grid>
+    <Grid Name="Displacement" GridType="Collection" CollectionType="Temporal">
+      <Grid Name="Displacement" GridType="Uniform">
+        <xi:include xpointer="xpointer(/Xdmf/Domain/Grid[@GridType='Uniform'][1]/*[self::Topology or self::Geometry])" />
+        <Time Value="0.33888888888888868" />
+        <Attribute Name="Displacement" AttributeType="Vector" Center="Node">
+          <DataItem Dimensions="5101 3" Format="HDF">thermal_2D_rectangle_AT1_lhat0.02_lam10.0_eta0.01_thmax4.00_nQS60_nDyn180_mpl1_T01.0.h5:/Function/Displacement/0_33888888888888868</DataItem>
+        </Attribute>
+      </Grid>
+    </Grid>
+  </Domain>
+</Xdmf>

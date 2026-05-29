@@ -183,3 +183,90 @@ def alt_min_loop(
         if float(np.sqrt(max(err, 0.0))) <= tol:
             return k
     return max_iter
+
+
+# =============================================================================
+# Crack counting and crack-nucleation events
+# =============================================================================
+def make_crack_counter(domain, V_alpha, thr: float = 0.5):
+    """Return ``count(alpha_array) -> int``: the number of connected damaged
+    regions (``alpha > thr``), i.e. the current crack count.
+
+    Adjacency is built once from the cell -> dof map, so the *same* routine
+    counts isolated damage bands in 1D (interval cells, 2 dofs) and connected
+    crack clusters in 2D (triangle cells, 3 dofs).  Counting is serial (one MPI
+    rank); in parallel it returns the rank-local count.
+    """
+    tdim    = domain.topology.dim
+    n_cells = domain.topology.index_map(tdim).size_local
+    dofmap  = V_alpha.dofmap
+
+    # All unique dof-dof edges within each cell (undirected).
+    edge_set = set()
+    for c in range(n_cells):
+        d = dofmap.cell_dofs(c)
+        for j in range(len(d)):
+            for k in range(j + 1, len(d)):
+                a, b = int(d[j]), int(d[k])
+                edge_set.add((a, b) if a < b else (b, a))
+    if edge_set:
+        edges = np.asarray(sorted(edge_set), dtype=np.int64)
+        e_a, e_b = edges[:, 0], edges[:, 1]
+    else:
+        e_a = e_b = np.empty(0, dtype=np.int64)
+
+    def count(alpha):
+        dmg = np.asarray(alpha) > thr
+        if not dmg.any():
+            return 0
+        active = dmg[e_a] & dmg[e_b]
+        parent = np.arange(dmg.size)
+
+        def find(x):
+            root = x
+            while parent[root] != root:
+                root = parent[root]
+            while parent[x] != root:
+                parent[x], x = root, parent[x]
+            return root
+
+        for a, b in zip(e_a[active], e_b[active]):
+            ra, rb = find(int(a)), find(int(b))
+            if ra != rb:
+                parent[rb] = ra
+        return len({find(int(i)) for i in np.nonzero(dmg)[0]})
+
+    return count
+
+
+def detect_crack_events(load, surface_energy, n_cracks, min_dS: float = 1e-9):
+    """Locate crack-nucleation *generations* from a run history.
+
+    Hybrid rule: an event is registered when the connected-crack count reaches a
+    new running maximum (a genuinely new crack appeared, since irreversibility
+    makes the damaged set only grow) *and* the surface energy increased over the
+    step (``dS > min_dS``).  The ``dS`` guard anchors each mark to a real
+    fracture-energy release and filters numerical flicker.
+
+    Returns a list of dicts ``{gen, load, n_cracks, new, S}`` -- one per
+    generation, where ``new`` is how many cracks that generation added.
+    """
+    load = np.asarray(load, dtype=float)
+    S    = np.asarray(surface_energy, dtype=float)
+    nc   = np.asarray(n_cracks, dtype=int)
+    if nc.size == 0:
+        return []
+    dS = np.diff(S, prepend=S[0])
+    events = []
+    running_max = 0
+    for i in range(nc.size):
+        if nc[i] > running_max and dS[i] > min_dS:
+            events.append({
+                "gen":      len(events) + 1,
+                "load":     float(load[i]),
+                "n_cracks": int(nc[i]),
+                "new":      int(nc[i] - running_max),
+                "S":        float(S[i]),
+            })
+            running_max = nc[i]
+    return events

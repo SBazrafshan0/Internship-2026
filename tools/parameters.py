@@ -12,14 +12,20 @@ Physical / model parameters
 ---------------------------
 ``l_hat``  -- regularisation length :math:`\\hat\\ell` (ratio of the
 internal length to the characteristic length of the domain).
-``Lambda`` -- foundation stiffness :math:`\\Lambda` (non-dimensional).
-``eta``    -- inverse wave-speed :math:`\\eta`.
+``Lambda`` -- foundation stiffness :math:`\\Lambda` (non-dimensional).  Note
+this is *not* the elastic Lame parameter :math:`\\lambda_{\\rm Lame}` (the
+latter is computed from ``E_ref`` and ``nu``).
+``eta``    -- dynamic *loading time-scale* :math:`\\eta`, used only through
+:math:`\\tau = \\eta t` in the imposed dynamic load.  It is no longer a mass
+or kinetic-energy multiplier.  Smaller ``eta`` slows the loading down, so the
+dynamic run is extended to ``t_final_dyn = 1 / eta``.
 
 Mesh parameters
 ---------------
 ``physics``       -- ``"1D"`` or ``"2D"``.
-``shape``         -- ``"rectangle"`` (default).  Anything you register in
-                      :data:`tools.meshing.GEOMETRY_BUILDERS` is accepted.
+(The geometry ``shape`` is *not* a user parameter: each problem file hard-codes
+its own shape via ``_PROBLEM_SHAPE``.  For a different geometry, write a new
+problem file rather than changing a parameter here.)
 ``mesh_per_lhat`` -- *single* knob controlling mesh resolution.  The cell
                       size is set to ``h = l_hat / mesh_per_lhat``.  Use
                       ``>= 4`` to resolve diffuse crack bands cleanly.
@@ -27,20 +33,20 @@ Mesh parameters
 
 Loading parameters
 ------------------
-``U_max`` / ``theta_max`` -- *amplitude* of the load at the canonical
-pseudo-time ``t = 1`` (the load keeps growing past ``t = 1`` if the
-simulation is not yet stopped by the damage criterion).
-``T0``                   -- smoothing length of the ramp.
-``N_steps_qs`` / ``N_steps_dyn`` -- *resolution* of the pseudo-time grid:
-the step size is ``dt = 1 / N_steps``.  The total number of steps is
-*not* fixed -- the simulation stops when the damage threshold is reached
-(see below).
+``U_max`` / ``theta_max`` -- *amplitude* of the load, reached at the canonical
+pseudo-time ``t = 1``: the QS ramp is ``U_max * t`` and the dynamic ramp
+``U_max * (tau/2)(1 + tanh(tau/T0))`` with ``tau = eta * t``.  Both reach the
+amplitude at ``t = 1`` (QS) / ``tau = 1`` (dynamic), so the final times are
+fixed: ``t_final_qs = 1`` and ``t_final_dyn = 1 / eta``.
+``T0``                   -- smoothing length of the dynamic ramp.
+``N_steps_qs`` / ``N_steps_dyn`` -- *number of steps* over each run.  The QS
+step is ``dt = 1 / N_steps_qs``; the dynamic step is stretched to
+``dt = (1/eta) / N_steps_dyn`` so the run covers the extended dynamic time.
 ``N_snapshots`` -- number of intermediate snapshots kept for plotting.
-``alpha_break`` -- stop when :math:`\\max_\\Omega\\alpha \\ge`
-``alpha_break`` (default 0.99 -- "complete failure at some point").
-``t_max``       -- safety upper bound on the pseudo-time.  If the damage
-threshold is never reached, the run bails out at ``t = t_max`` (default
-3.0, i.e. up to triple the canonical loading amplitude).
+
+Crack-nucleation *generations* are detected from the run history (jumps in the
+surface energy, labelled by the connected damaged-region count) and marked on
+the energy plot -- there is no stopping/threshold parameter.
 
 Solver parameters
 -----------------
@@ -63,36 +69,42 @@ from copy import deepcopy
 # -----------------------------------------------------------------------------
 DEFAULT_MODEL_PARAMETERS = {
     "l_hat":  0.02,
-    "Lambda": 10.0,
+    "Lambda": 1.0,
     "eta":    1.0e-2,
+    "E_ref":  1.0,    # reference Young's modulus (for non-dimensionalisation)
+    "nu":     0.3,    # Poisson's ratio (only used for 2D plane strain elasticity)
+    # Viscous dissipation potential  Q = 0.5 * int( c1|u'|^2 + c2 eps(u'):eps(u') + c3 grad(u'):grad(u') ):
+    "c1":     1.0e-3,    # local-velocity damping
+    "c2":     1.0e-3,    # strain-rate damping (also a Cauchy stress component)
+    "c3":     1.0e-3,    # full velocity-gradient high-order filter (weak-form only)
 }
 
 DEFAULT_MESH_PARAMETERS = {
     "physics":       "1D",          # "1D" or "2D"
-    "shape":         "rectangle",   # any key registered in GEOMETRY_BUILDERS
     "mesh_per_lhat": 4,             # cells per regularisation length
     "Lx":            1.0,
-    "Ly":            0.2,
+    "Ly":            0.3,
+}
+
+# Loading settings shared by both problems (step counts, snapshots, fracture
+# marker).  Each problem dict below adds only its own amplitude (U_max /
+# theta_max) and ramp smoothing T0.
+_COMMON_LOADING = {
+    "N_steps_qs":   30,             # number of quasi-static steps (dt = 1/N)
+    "N_steps_dyn": 180,             # number of dynamic steps
+    "N_snapshots":   6,             # intermediate snapshots kept for plotting
 }
 
 DEFAULT_MECH_LOADING = {
-    "U_max":       1.4,
-    "T0":          1.0,
-    "N_steps_qs":   60,             # step *resolution*  (dt = 1/N)
-    "N_steps_dyn": 180,
-    "N_snapshots":   6,
-    "alpha_break": 0.99,            # stop when max(alpha) >= this
-    "t_max":         3.0,           # safety cap on pseudo-time
+    "U_max":       0.7,
+    "T0":          0.7,
+    **_COMMON_LOADING,
 }
 
 DEFAULT_THERM_LOADING = {
-    "theta_max":   4.0,
-    "T0":          1.0,
-    "N_steps_qs":   60,
-    "N_steps_dyn": 180,
-    "N_snapshots":   6,
-    "alpha_break": 0.99,
-    "t_max":         3.0,
+    "theta_max":   10.0,
+    "T0":          0.7,
+    **_COMMON_LOADING,
 }
 
 DEFAULT_SOLVER_PARAMETERS = {
@@ -147,6 +159,11 @@ def filename_stub(physics_type: str, model: dict, mesh: dict,
     shape = mesh.get("shape", "rectangle")
     mdl   = solver["model"]
     mpl   = mesh.get("mesh_per_lhat", 4)
+    E     = model.get("E_ref", 1.0)
+    nu    = model.get("nu", 0.0)
+    c1    = model.get("c1", 0.0)
+    c2    = model.get("c2", 0.0)
+    c3    = model.get("c3", 0.0)
     if physics_type == "mechanical":
         amp_key, amp_val = "umax", loading["U_max"]
     else:
@@ -154,6 +171,7 @@ def filename_stub(physics_type: str, model: dict, mesh: dict,
     return (
         f"{physics_type}_{ph}_{shape}_{mdl}"
         f"_lhat{model['l_hat']}_lam{model['Lambda']}_eta{model['eta']}"
+        f"_E{E:g}_nu{nu:g}_c1{c1:g}_c2{c2:g}_c3{c3:g}"
         f"_{amp_key}{amp_val:.2f}"
         f"_nQS{loading['N_steps_qs']}_nDyn{loading['N_steps_dyn']}"
         f"_mpl{mpl}_T0{loading['T0']}"
