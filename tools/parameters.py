@@ -69,12 +69,12 @@ from copy import deepcopy
 # -----------------------------------------------------------------------------
 DEFAULT_MODEL_PARAMETERS = {
     "l_hat":  0.02,
-    "Lambda": 1.0,
+    "Lambda": 0.0,
     "eta":    1.0e-2,
     "E_ref":  1.0,    # reference Young's modulus (for non-dimensionalisation)
     "nu":     0.3,    # Poisson's ratio (only used for 2D plane strain elasticity)
     # Viscous dissipation potential  Q = 0.5 * int( c1|u'|^2 + c2 eps(u'):eps(u') + c3 grad(u'):grad(u') ):
-    "c1":     1.0e-3,    # local-velocity damping
+    "c1":     0.0e-3,    # local-velocity damping
     "c2":     1.0e-3,    # strain-rate damping (also a Cauchy stress component)
     "c3":     1.0e-3,    # full velocity-gradient high-order filter (weak-form only)
 }
@@ -102,7 +102,7 @@ DEFAULT_MECH_LOADING = {
 }
 
 DEFAULT_THERM_LOADING = {
-    "theta_max":   10.0,
+    "theta_max":   20.0,
     "T0":          0.7,
     **_COMMON_LOADING,
 }

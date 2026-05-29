@@ -59,19 +59,22 @@ from problems import PROBLEMS
 PROBLEM = "dynamic"          # "dynamic" or "thermal" or any key of PROBLEMS
 
 SWEEP = {
-    "l_hat":   [0.01, 0.02, 0.04, 0.08],
-    "Lambda":  [1.0, 10.0, 20.0, 50.0],
-    "eta":     [1e-3, 1e-2, 5e-2, 1e-1],
-    "N_qs":    [60],
-    "model":   ["AT2"],            # add "AT1" to sweep both
-    "physics": ["1D"],             # add "2D" to sweep both
+    "l_hat":   [0.01, 0.02, 0.04],
+    "Lambda":  [0.0, 1.0],
+    "eta":     [1e-2, 5e-2, 1e-1],
+    "N_qs":    [30],
+    "model":   ["AT1", "AT2"],            # add "AT1" to sweep both
+    "physics": ["1D", "2D"],             # add "2D" to sweep both
+    "c1":      [0.0, 1.0e-3],            # local-velocity damping
+    "c2":      [0.0, 1.0e-3],               # strain-rate damping (also a Cauchy stress component)
+    "c3":      [0.0, 1.0e-3],            # full velocity-gradient high-order filter (weak-form only)  
 }
 
 BASE_OVERRIDES = {
     "mesh_parameters": {
-        "mesh_per_lhat": 5,        # cells per regularisation length
+        "mesh_per_lhat": 3,        # cells per regularisation length
         "Lx":            1.0,
-        "Ly":            0.2,
+        "Ly":            0.5,
     },
     "AltMin_parameters": {
         "max_iter": 500,
@@ -81,7 +84,7 @@ BASE_OVERRIDES = {
         "beta":  0.25,
         "gamma": 0.5,
     },
-    "_dyn_to_qs_ratio": 3,
+    "_dyn_to_qs_ratio": 6,          # N_steps_dyn = _dyn_to_qs_ratio * N_steps_qs
 }
 
 
@@ -108,6 +111,9 @@ def _build_config(problem_name: str, run: dict) -> dict:
     cfg["model_parameters"]["eta"]    = run["eta"]
     cfg["solver_parameters"]["model"] = run["model"]
     cfg["mesh_parameters"]["physics"] = run["physics"]
+    cfg["model_parameters"]["c1"] = run["c1"]
+    cfg["model_parameters"]["c2"] = run["c2"]
+    cfg["model_parameters"]["c3"] = run["c3"]
 
     n_qs = run["N_qs"]
     cfg["loading_parameters"]["N_steps_qs"]  = n_qs

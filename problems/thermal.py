@@ -526,8 +526,8 @@ if __name__ == "__main__":
     cfg = get_defaults("thermal")
 
     # ----- edit *here* to switch model / physics --------------------------
-    cfg["solver_parameters"]["model"]   = "AT1"        # "AT1" or "AT2"
-    cfg["mesh_parameters"]["physics"]   = "2D"         # "1D"  or "2D"
+    cfg["solver_parameters"]["model"]   = "AT2"        # "AT1" or "AT2"
+    cfg["mesh_parameters"]["physics"]   = "1D"         # "1D"  or "2D"
     cfg["mesh_parameters"]["mesh_per_lhat"] = 3
     # ----------------------------------------------------------------------
 
