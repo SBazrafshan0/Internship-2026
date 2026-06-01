@@ -69,12 +69,12 @@ from copy import deepcopy
 # -----------------------------------------------------------------------------
 DEFAULT_MODEL_PARAMETERS = {
     "l_hat":  0.02,
-    "Lambda": 1.0,
+    "Lambda": 0.5,
     "eta":    1.0e-2,
     "E_ref":  1.0,    # reference Young's modulus (for non-dimensionalisation)
     "nu":     0.3,    # Poisson's ratio (only used for 2D plane strain elasticity)
     # Viscous dissipation potential  Q = 0.5 * int( c1|u'|^2 + c2 eps(u'):C:eps(u') + c3|alpha'|^2 ):
-    "c1":     1.0e-3,    # local-velocity damping
+    "c1":     0.0e-3,    # local-velocity damping
     "c2":     1.0e-3,    # strain-rate damping (Kelvin-Voigt, also a Cauchy stress component)
     "c3":     1.0e-3,    # damage-rate damping (viscous regularisation of damage evolution)
 }
