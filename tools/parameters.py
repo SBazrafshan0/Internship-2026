@@ -96,7 +96,7 @@ _COMMON_LOADING = {
 }
 
 DEFAULT_MECH_LOADING = {
-    "U_max":       1.0,
+    "U_max":       1.4,
     "T0":          0.7,
     **_COMMON_LOADING,
 }

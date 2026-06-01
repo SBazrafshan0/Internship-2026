@@ -60,11 +60,11 @@ PROBLEM = "dynamic"          # "dynamic" or "thermal" or any key of PROBLEMS
 
 SWEEP = {
     "l_hat":   [0.02],
-    "Lambda":  [0.0, 0.5],
+    "Lambda":  [0.5],
     "eta":     [1e-2, 5e-2, 1e-1],
     "N_qs":    [30],
     "model":   ["AT1", "AT2"],            # add "AT1" to sweep both
-    "physics": ["1D", "2D"],             # add "2D" to sweep both
+    "physics": ["2D"],             # add "2D" to sweep both
     "c1":      [0.0, 1.0e-3, 1.0e-2],            # local-velocity damping
     "c2":      [0.0, 1.0e-3, 1.0e-2],               # strain-rate damping (also a Cauchy stress component)
     "c3":      [0.0, 1.0e-3, 1.0e-2],            # full velocity-gradient high-order filter (weak-form only)  
