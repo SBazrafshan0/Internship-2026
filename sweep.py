@@ -59,8 +59,8 @@ from problems import PROBLEMS
 PROBLEM = "dynamic"          # "dynamic" or "thermal" or any key of PROBLEMS
 
 SWEEP = {
-    "l_hat":   [0.01, 0.02, 0.04],
-    "Lambda":  [0.0, 1.0],
+    "l_hat":   [0.02],
+    "Lambda":  [0.0, 0.5],
     "eta":     [1e-2, 5e-2, 1e-1],
     "N_qs":    [30],
     "model":   ["AT1", "AT2"],            # add "AT1" to sweep both

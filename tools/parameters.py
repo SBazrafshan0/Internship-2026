@@ -74,8 +74,8 @@ DEFAULT_MODEL_PARAMETERS = {
     "E_ref":  1.0,    # reference Young's modulus (for non-dimensionalisation)
     "nu":     0.3,    # Poisson's ratio (only used for 2D plane strain elasticity)
     # Viscous dissipation potential  Q = 0.5 * int( c1|u'|^2 + c2 eps(u'):C:eps(u') + c3|alpha'|^2 ):
-    "c1":     0.0e-3,    # local-velocity damping
-    "c2":     0.0e-3,    # strain-rate damping (Kelvin-Voigt, also a Cauchy stress component)
+    "c1":     1.0e-3,    # local-velocity damping
+    "c2":     1.0e-3,    # strain-rate damping (Kelvin-Voigt, also a Cauchy stress component)
     "c3":     1.0e-3,    # damage-rate damping (viscous regularisation of damage evolution)
 }
 
@@ -96,7 +96,7 @@ _COMMON_LOADING = {
 }
 
 DEFAULT_MECH_LOADING = {
-    "U_max":       0.7,
+    "U_max":       1.0,
     "T0":          0.7,
     **_COMMON_LOADING,
 }
