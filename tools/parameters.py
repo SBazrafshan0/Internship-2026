@@ -69,7 +69,7 @@ from copy import deepcopy
 # -----------------------------------------------------------------------------
 DEFAULT_MODEL_PARAMETERS = {
     "l_hat":  0.02,
-    "Lambda": 0.5,
+    "Lambda": 3.0,
     "eta":    1.0e-2,
     "E_ref":  1.0,    # reference Young's modulus (for non-dimensionalisation)
     "nu":     0.3,    # Poisson's ratio (only used for 2D plane strain elasticity)
@@ -83,14 +83,14 @@ DEFAULT_MESH_PARAMETERS = {
     "physics":       "1D",          # "1D" or "2D"
     "mesh_per_lhat": 4,             # cells per regularisation length
     "Lx":            1.0,
-    "Ly":            0.3,
+    "Ly":            1.0,
 }
 
 # Loading settings shared by both problems (step counts, snapshots, fracture
 # marker).  Each problem dict below adds only its own amplitude (U_max /
 # theta_max) and ramp smoothing T0.
 _COMMON_LOADING = {
-    "N_steps_qs":   30,             # number of quasi-static steps (dt = 1/N)
+    "N_steps_qs":   60,             # number of quasi-static steps (dt = 1/N)
     "N_steps_dyn": 180,             # number of dynamic steps
     "N_snapshots":   20,             # intermediate snapshots kept for plotting
 }
@@ -102,7 +102,7 @@ DEFAULT_MECH_LOADING = {
 }
 
 DEFAULT_THERM_LOADING = {
-    "theta_max":   20.0,
+    "theta_max":   5.0,
     "T0":          0.7,
     **_COMMON_LOADING,
 }
