@@ -52,7 +52,15 @@ the fracture-energy density as
     \\hat\\ell^{\\,2}|\\nabla\\alpha|^2\\big)
 """
 
-import ufl
+import math
+
+# ufl is only needed when the model lambdas are fed UFL expressions (FEM
+# problems).  The semi-analytic problem (problems/secondary.py) evaluates the
+# same lambdas on floats, so the import is optional.
+try:
+    import ufl
+except ImportError:                                       # pragma: no cover
+    ufl = None
 
 
 def _g(alpha):
@@ -91,6 +99,33 @@ def get_model(name: str) -> dict:
 def g_degradation(alpha):
     """Elastic degradation function -- exposed for problem files."""
     return _g(alpha)
+
+
+def critical_strain(model_name: str, Gc: float = 1.0, E_h: float = 1.0,
+                    ell_d: float = 1.0, h: float = 1.0e-8) -> float:
+    """
+    Damage-nucleation strain threshold of the concept note (secondary
+    cracking).  For the energy density
+
+        psi(e, alpha) = 0.5 * E_h * g(alpha) * e**2
+                        + (Gc/ell_d) * w(alpha) + Gc * ell_d * |alpha_x|**2,
+
+    damage nucleates from the intact state alpha = 0 when
+
+        e**2 >= e_crit**2 = 2 * Gc * w'(0) / (E_h * ell_d * |g'(0)|).
+
+    ``w'(0)`` and ``g'(0)`` are evaluated by a forward difference on the model
+    lambdas, so any entry of :data:`MODELS` works.  AT1 (w'(0)=1) gives a
+    finite elastic phase; AT2 (w'(0)=0) gives e_crit = 0 (no sub-critical
+    regime), consistent with the table above.
+
+    NOTE: this uses the note's normalisation of the fracture term (Gc/ell_d,
+    no 1/c_w); ``ell_d`` plays the role of the regularisation length l_hat.
+    """
+    m = get_model(model_name)
+    wp0 = (float(m["w"](h)) - float(m["w"](0.0))) / h
+    gp0 = (_g(h) - _g(0.0)) / h
+    return math.sqrt(2.0 * Gc * wp0 / (E_h * ell_d * abs(gp0)))
 
 
 def fracture_energy_density(alpha, grad_alpha_sq, l_hat, model_name: str):

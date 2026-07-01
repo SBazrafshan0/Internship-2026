@@ -143,7 +143,8 @@ def plot_mechanical_run(
     ax_force.plot(qs["U"],  qs["F"],  "k.-", lw=0.6, alpha=0.7, label="QS")
     ax_force.plot(dyn["U"], dyn["F"], "rx-", lw=0.6, alpha=0.7, label=fr"dyn, $\eta={eta}$")
     ax_force.set_xlabel(r"$\hat U(t)$"); ax_force.set_ylabel(r"reaction $\hat F$")
-    ax_force.set_title("Force-displacement"); ax_force.grid(True, alpha=0.3); ax_force.legend()
+    ax_force.set_title(r"Force-displacement: $\hat F$ vs $\hat U$")
+    ax_force.grid(True, alpha=0.3); ax_force.legend()
 
     if ph == "1D":
         ax_dam = fig.add_subplot(gs[0, 1:])
@@ -168,8 +169,8 @@ def plot_mechanical_run(
         for ax in (ax_dam_qs, ax_dam_dyn):
             ax.set_xlabel(r"$\hat x$"); ax.set_ylabel(r"$\hat y$")
             ax.set_aspect("equal"); ax.grid(True, alpha=0.3)
-        ax_dam_qs.set_title(r"QS: final damage")
-        ax_dam_dyn.set_title(r"Dynamic: final damage")
+        ax_dam_qs.set_title(r"QS: final damage $\alpha(\hat x,\hat y)$")
+        ax_dam_dyn.set_title(r"Dynamic: final damage $\alpha(\hat x,\hat y)$")
 
     ax_energy.plot(dyn["U"], dyn["K"],     "mx-", lw=0.6, alpha=0.7, label=r"$\hat K$ (dyn)")
     ax_energy.plot(qs["U"],  qs["P_el"],   "b.-", lw=0.6, alpha=0.7, label=r"$\hat P_{el}$ QS")
@@ -182,8 +183,10 @@ def plot_mechanical_run(
         ax_energy.plot(dyn["U"], dyn["D"], "yx-", lw=0.6, alpha=0.7, label=r"$\hat D$ (dissipated)")
     ax_energy.plot(qs["U"],  qs["total"],  "k.-", lw=0.6, alpha=0.7, label="Total QS")
     ax_energy.plot(dyn["U"], dyn["total"], "kx-", lw=0.6, alpha=0.7, label=r"Total Dyn ($K{+}P_{el}{+}P_f{+}S$)")
-    ax_energy.set_xlabel(r"$\hat U(t)$"); ax_energy.set_ylabel("Energy")
-    ax_energy.set_title("Energy evolution"); ax_energy.grid(True, alpha=0.3)
+    ax_energy.set_xlabel(r"$\hat U(t)$")
+    ax_energy.set_ylabel(r"energy $\hat{\mathcal{E}}\in\{\hat K,\hat P_{el},\hat P_f,\hat S\}$")
+    ax_energy.set_title(r"Energy evolution: $\hat{\mathcal{E}}$ vs $\hat U$")
+    ax_energy.grid(True, alpha=0.3)
     ax_energy.legend(fontsize=9, ncol=2, loc="best")
 
     # Mark crack-nucleation generations (QS and dynamic).
@@ -237,7 +240,8 @@ def plot_thermal_run(
     ax_force.plot(qs["theta"],  qs["sigma_bar"],  "k.-", lw=0.6, alpha=0.7, label="QS")
     ax_force.plot(dyn["theta"], dyn["sigma_bar"], "rx-", lw=0.6, alpha=0.7, label="dynamic")
     ax_force.set_xlabel(r"$\theta(t)$"); ax_force.set_ylabel(r"mean stress $\bar\sigma$")
-    ax_force.set_title("Mean stress vs thermal strain"); ax_force.grid(True, alpha=0.3); ax_force.legend()
+    ax_force.set_title(r"Mean stress: $\bar\sigma$ vs $\theta$")
+    ax_force.grid(True, alpha=0.3); ax_force.legend()
 
     ax_energy.plot(dyn["theta"], dyn["K"],     "mx-", lw=0.6, alpha=0.7, label=r"$\hat K$ (dyn)")
     ax_energy.plot(qs["theta"],  qs["P_el"],   "b.-", lw=0.6, alpha=0.7, label=r"$\hat P_{el}$ QS")
@@ -250,8 +254,10 @@ def plot_thermal_run(
         ax_energy.plot(dyn["theta"], dyn["D"], "yx-", lw=0.6, alpha=0.7, label=r"$\hat D$ (dissipated)")
     ax_energy.plot(qs["theta"],  qs["total"],  "k.-", lw=0.6, alpha=0.7, label="Total QS")
     ax_energy.plot(dyn["theta"], dyn["total"], "kx-", lw=0.6, alpha=0.7, label="Total Dyn")
-    ax_energy.set_xlabel(r"$\theta(t)$"); ax_energy.set_ylabel("Energy")
-    ax_energy.set_title("Energy evolution"); ax_energy.grid(True, alpha=0.3)
+    ax_energy.set_xlabel(r"$\theta(t)$")
+    ax_energy.set_ylabel(r"energy $\hat{\mathcal{E}}\in\{\hat K,\hat P_{el},\hat P_f,\hat S\}$")
+    ax_energy.set_title(r"Energy evolution: $\hat{\mathcal{E}}$ vs $\theta$")
+    ax_energy.grid(True, alpha=0.3)
     ax_energy.legend(fontsize=9, ncol=2, loc="best")
 
     # Mark crack-nucleation generations (QS and dynamic).
@@ -273,8 +279,8 @@ def plot_thermal_run(
         for ax in (ax_frag_qs, ax_frag_dyn):
             ax.set_ylim(-0.05, 1.05); ax.set_xlabel(r"$\hat x$"); ax.set_ylabel(r"$\alpha$")
             ax.grid(True, alpha=0.3); ax.legend(ncol=2, fontsize=6, loc="upper right")
-        ax_frag_qs.set_title("QS: fragmentation generations")
-        ax_frag_dyn.set_title("Dynamic: fragmentation generations")
+        ax_frag_qs.set_title(r"QS: fragmentation $\alpha(\hat x)$ per generation")
+        ax_frag_dyn.set_title(r"Dynamic: fragmentation $\alpha(\hat x)$ per generation")
     else:
         tri = result.get("triang")
         last_qs  = qs_snaps[-1]["alpha"] if qs_snaps  else result["alpha_qs_final"]
@@ -287,14 +293,294 @@ def plot_thermal_run(
         for ax in (ax_frag_qs, ax_frag_dyn):
             ax.set_aspect("equal"); ax.set_xlabel(r"$\hat x$"); ax.set_ylabel(r"$\hat y$")
             ax.grid(True, alpha=0.3)
-        ax_frag_qs.set_title("QS: final damage")
-        ax_frag_dyn.set_title("Dynamic: final damage")
+        ax_frag_qs.set_title(r"QS: final damage $\alpha(\hat x,\hat y)$")
+        ax_frag_dyn.set_title(r"Dynamic: final damage $\alpha(\hat x,\hat y)$")
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.90])
 
     paths = output_paths(output_dir)
     stem  = filename_stub("thermal", model_parameters, mesh_parameters,
                           loading_parameters, solver_parameters)
+    return _save_fig(fig, paths["png"], paths["pdf"], stem)
+
+
+# =============================================================================
+# Secondary cracking (semi-analytic, problems/secondary.py)
+# =============================================================================
+def plot_secondary_run(result: dict, output_dir: str | Path) -> tuple[str, str]:
+    """
+    Diagnostic figure for one semi-analytic secondary-cracking run
+    (``problems.secondary.run_problem``).  The panels follow, *in order*, the
+    "Semi-analytic list of questions" of the concept note:
+
+    Step 1  Static release   -- (1a) relaxed strain profile e+(x);
+                                (1b) released energy DeltaE_1/2 = tanh(Lambda).
+    Step 2  Modal decomp.    -- coefficients A_n and energy quota Q_n vs
+                                beta_n = q_n * ell_e.
+    Step 3  Wave propagation -- reconstructed space-time strain e(x,t), with the
+            & damping           c and c/sqrt(2) (group-velocity) characteristics.
+    Step 4  Stress amplif.   -- (4a) R_crack(t) = max_x |e|/e_crit vs round-trips
+                                with the exp(-gamma t) damping envelope (the
+                                R_crack > 1 test); (4b) where: max_t |e|/e_crit
+                                vs x.
+
+    Step 5 (parameter map) is a *separate* figure: see
+    :func:`plot_secondary_regime_map` / ``problems.secondary.trigger_map``.
+    """
+    p       = result["parameters"]
+    x, t    = result["x"], result["t"]
+    e_xt    = result["e_xt"]
+    e_crit  = result["e_crit"]
+    tau_rt  = result["tau_rt"]
+    gam     = result["gamma_bar"]
+    ell_e   = p["ell_e"]
+    theta   = p["theta"]
+    c       = p["c"]
+    Lam     = p["Lambda_bar"]
+    Gam     = p["Gamma"]
+    l_hat   = result.get("l_hat", p.get("l_hat"))
+    ell     = result.get("ell", ell_e / Lam)
+    ell_d   = result.get("ell_d", (l_hat * ell if l_hat is not None else None))
+    model   = p.get("model", "AT1")
+    trig    = result["trigger"]
+    x_excl  = result.get("x_excl", p["x_exclude"] * ell_e)
+    ratio   = np.abs(e_xt) / e_crit
+
+    fig, axs = plt.subplots(2, 3, figsize=(17, 9))
+    fig.suptitle(
+        rf"Secondary cracking (semi-analytic):  "
+        rf"$\Lambda=\ell_e/\ell={Lam:g}$ | "
+        rf"$\Gamma=\gamma\tau_{{rt}}={Gam:g}$ | "
+        rf"$\hat\ell=\ell_d/\ell={l_hat:g}$ | "
+        rf"$e_{{crit}}/\theta={e_crit/theta:g}$ ({model})"
+        + ("   --   TRIGGERED" if trig else "   --   no secondary crack") + "\n"
+        + rf"$\ell/\ell_e={ell/ell_e:g}$ | $\ell_d={ell_d:g}$ | "
+        rf"$\gamma={gam:.3g}$ | $\tau_{{rt}}={tau_rt:.3g}$ | "
+        rf"$\theta={theta:g}$ | $N_{{modes}}={p['n_modes']}$ | "
+        rf"$N_{{rt}}={p['n_roundtrips']:g}$",
+        fontsize=11, fontweight="bold")
+
+    # ---- Step 1 (a): static release, relaxed strain profile -----------------
+    ax = axs[0, 0]
+    ax.plot(x / ell_e, result["e_plus"] / theta, "k-", lw=1.5,
+            label=r"$e^+(x)/\theta$ (relaxed)")
+    # PDF convention e = u_x - theta: pre-stress is e_0 = -theta, e^+ -> -theta
+    # far from the crack and e^+(0)=0; the |e|>=e_crit test is symmetric.
+    ax.axhline(-1.0, color="b", ls=":", lw=1.0, label=r"pre-stress $e_0=-\theta$")
+    ax.axhline(e_crit / theta, color="r", ls="--", lw=1.0,
+               label=r"$\pm e_{crit}/\theta$")
+    ax.axhline(-e_crit / theta, color="r", ls="--", lw=1.0)
+    ax.set_xlabel(r"$x/\ell_e$"); ax.set_ylabel(r"$e/\theta$")
+    ax.set_title("Step 1 - Static release: relaxed strain $e^+(x)$")
+    ax.grid(True, alpha=0.3); ax.legend(fontsize=8)
+
+    # ---- Step 1 (b): released energy ----------------------------------------
+    # With Lambda = ell_e/ell the released energy is
+    #   dE_1/2 / (1/2 E_h theta^2 ell_e) = tanh(ell/ell_e) = tanh(1/Lambda).
+    ax = axs[0, 1]
+    Lam_axis = np.linspace(max(1e-2, 0.1 * Lam), max(2.0 * Lam, 3.0), 300)
+    ax.plot(Lam_axis, np.tanh(1.0 / Lam_axis), "k-", lw=1.5,
+            label=r"$\Delta E_{1/2} / (\frac{1}{2} E_h\theta^2\ell_e)"
+                  r" = \tanh(1/\Lambda)$")
+    ax.plot(Lam_axis, np.clip(1.0 / Lam_axis, None, 1.5), "b:", lw=1.0,
+            label=r"$\sim 1/\Lambda$  ($\ell\ll\ell_e$)")
+    ax.axhline(1.0, color="g", ls=":", lw=1.0,
+               label=r"$\sim 1$  ($\ell\gg\ell_e$)")
+    ax.plot(Lam, np.tanh(1.0 / Lam), "r*", ms=14, mec="k", label="this run")
+    ax.set_ylim(0, 1.6)
+    ax.set_xlabel(r"$\Lambda=\ell_e/\ell$")
+    ax.set_ylabel(r"$\Delta E_{1/2}/(\frac{1}{2} E_h\theta^2\ell_e)$")
+    ax.set_title(r"Step 1 - Released energy: $\Delta E_{1/2}=\tanh(1/\Lambda)$")
+    ax.grid(True, alpha=0.3); ax.legend(fontsize=8)
+
+    # ---- Step 2: modal decomposition (coefficients A_n and quota Q_n) -------
+    ax = axs[0, 2]
+    beta = result["beta_n"]
+    a0n = np.abs(result["a0"]) / np.max(np.abs(result["a0"]))
+    l1 = ax.semilogx(beta, result["Q_n"], "ko-", ms=3, lw=0.8,
+                     label=r"$Q_n$ (energy quota)")
+    ax.set_xlabel(r"$\beta_n = q_n \ell_e$")
+    ax.set_ylabel(r"$Q_n$")
+    ax.axvline(1.0, color="r", ls="--", lw=1.0, label=r"$\beta_n = 1$")
+    axb = ax.twinx()
+    l2 = axb.semilogx(beta, a0n, "C0.", ms=3, alpha=0.6,
+                      label=r"$|A_n|$ (normalised)")
+    l3 = axb.semilogx(beta, 1.0 / (1.0 + beta ** 2), "C0--", lw=1.0,
+                      label=r"$1/(1+\beta_n^2)$")
+    axb.set_ylabel(r"$|A_n|$", color="C0")
+    axb.tick_params(axis="y", labelcolor="C0")
+    ax.legend(handles=[l1[0], l2[0], l3[0]], fontsize=8, loc="upper right")
+    ax.set_title("Step 2 - Modal decomposition: $A_n$, $Q_n$")
+    ax.grid(True, alpha=0.3, which="both")
+
+    # ---- Step 3: wave propagation & damping (space-time reconstruction) -----
+    ax = axs[1, 0]
+    pcm = ax.pcolormesh(t / tau_rt, x / ell_e, ratio,
+                        cmap="inferno", shading="auto",
+                        vmin=0.0, vmax=max(1.2, ratio.max()))
+    fig.colorbar(pcm, ax=ax, fraction=0.046, pad=0.04,
+                 label=r"$|e(x,t)|/e_{crit}$")
+    if ratio.max() >= 1.0:
+        ax.contour(t / tau_rt, x / ell_e, ratio, levels=[1.0],
+                   colors="cyan", linewidths=1.2)
+    ax.plot(t / tau_rt, c * t / ell_e, "w--", lw=0.8, alpha=0.7)
+    ax.plot(t / tau_rt, (c / np.sqrt(2.0)) * t / ell_e, "w:", lw=0.8,
+            alpha=0.7)
+    ax.axhline(x_excl / ell_e, color="0.6", ls="-", lw=0.8)
+    if trig:
+        ax.plot(trig["t"] / tau_rt, trig["x"] / ell_e, "c*", ms=14,
+                mec="k", label="secondary crack")
+        ax.legend(fontsize=8, loc="lower right")
+    ax.set_ylim(0, x.max() / ell_e)
+    ax.set_xlabel(r"$t/\tau_{rt}$"); ax.set_ylabel(r"$x/\ell_e$")
+    ax.set_title("Step 3 - Wave propagation & damping: $e(x,t)$")
+
+    # ---- Step 4 (a): stress amplification R_crack(t) (the R_crack>1 test) ---
+    ax = axs[1, 1]
+    mask = x >= x_excl
+    hist = np.abs(e_xt[mask, :]).max(axis=0) / e_crit
+    ax.plot(t / tau_rt, hist, "k-", lw=1.2,
+            label=r"$\mathcal{R}_{crack}(t)=\max_x |e|/e_{crit}$")
+    env = hist[0] * np.exp(-gam * t) if hist[0] > 0 else np.exp(-gam * t)
+    ax.plot(t / tau_rt, env, "b:", lw=1.0, label=r"$\propto e^{-\gamma t}$")
+    ax.axhline(1.0, color="r", ls="--", lw=1.0,
+               label=r"$\mathcal{R}_{crack}=1$")
+    for k in range(1, int(np.floor(t[-1] / tau_rt)) + 1):
+        ax.axvline(k, color="0.7", ls=":", lw=0.8)
+    if trig:
+        ax.plot(trig["t"] / tau_rt, trig["e"] / e_crit, "c*", ms=14, mec="k",
+                label=fr"trigger, $t={trig['t']/tau_rt:.2f}\,\tau_{{rt}}$")
+    ax.set_xlabel(r"$t/\tau_{rt}$")
+    ax.set_ylabel(r"$\mathcal{R}_{crack}=\max_x |e|/e_{crit}$")
+    ax.set_title(r"Step 4 - Stress amplification: $\mathcal{R}_{crack}(t)$")
+    ax.grid(True, alpha=0.3); ax.legend(fontsize=8)
+
+    # ---- Step 4 (b): where the amplification peaks --------------------------
+    ax = axs[1, 2]
+    ax.plot(x / ell_e, ratio.max(axis=1), "k-", lw=1.5,
+            label=r"$\max_t |e(x,t)|/e_{crit}$")
+    ax.axhline(1.0, color="r", ls="--", lw=1.0, label="threshold")
+    ax.axvspan(0.0, x_excl / ell_e, color="0.85",
+               label="excluded (first crack)")
+    if trig:
+        ax.axvline(trig["x"] / ell_e, color="c", ls="-.", lw=1.2)
+    ax.set_xlabel(r"$x/\ell_e$"); ax.set_ylabel(r"$\max_t |e|/e_{crit}$")
+    ax.set_title(r"Step 4 - Stress amplification: $\max_t |e|/e_{crit}$ vs $x/\ell_e$")
+    ax.grid(True, alpha=0.3); ax.legend(fontsize=8)
+
+    plt.tight_layout(rect=[0, 0.02, 1, 0.92])
+    paths = output_paths(output_dir)
+    stem = (f"secondary_run_Lam{Lam:g}_Gam{Gam:g}_lhat{l_hat:g}"
+            f"_ecrit{e_crit / theta:g}_{model}_nm{p['n_modes']}"
+            f"_nrt{p['n_roundtrips']:g}")
+    return _save_fig(fig, paths["png"], paths["pdf"], stem)
+
+
+def _secondary_base_str(base: dict) -> str:
+    """One-line summary of the fixed parameters of a regime sweep."""
+    return (rf"$e_{{crit}}$ from {base.get('model', 'AT1')}, "
+            rf"$G_c={base.get('Gc', 1.0):g}$ | "
+            rf"$N_{{modes}}={base.get('n_modes', '?')}$, "
+            rf"$N_{{rt}}={base.get('n_roundtrips', 4.0):g}$ | "
+            rf"$\theta={base.get('theta', 1.0):g}$")
+
+
+def plot_secondary_regime_map(sweep: dict,
+                              output_dir: str | Path) -> tuple[str, str]:
+    """
+    Regime map in the ``(Lambda, Gamma)`` plane at a *single* ``l_hat`` from
+    ``problems.secondary.trigger_map``: colour = trigger margin
+    ``max|e| / e_crit``; the level-1 contour separates *secondary cracking*
+    from *wave damped out*.  ``sweep["margin"]`` is 2-D and ``sweep["l_hat"]``
+    is the scalar internal-length ratio of this map (put in the title and the
+    file name so the nine maps do not overwrite each other).
+    """
+    Lam  = np.asarray(sweep["Lambda_bar"])
+    Gam  = np.asarray(sweep["Gamma"])
+    M    = np.asarray(sweep["margin"])
+    lh   = float(np.asarray(sweep["l_hat"]).ravel()[0])
+    base = sweep.get("base_parameters", {})
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    pcm = ax.pcolormesh(Lam, Gam, M, cmap="RdBu_r", shading="auto",
+                        vmin=2.0 - M.max() if M.max() > 1 else None,
+                        vmax=M.max())
+    fig.colorbar(pcm, ax=ax, label=r"trigger margin $\max|e|/e_{crit}$")
+    if M.min() < 1.0 < M.max():
+        cs = ax.contour(Lam, Gam, M, levels=[1.0], colors="k",
+                        linewidths=1.8)
+        ax.clabel(cs, fmt={1.0: "secondary-cracking boundary"}, fontsize=8)
+    ax.set_xlabel(r"$\Lambda = \ell_e/\ell$")
+    ax.set_ylabel(r"$\Gamma = \gamma\,\tau_{rt}$")
+    ax.set_title(rf"Step 5 - Parameter map at $\hat\ell=\ell_d/\ell={lh:g}$"
+                 "\n" r"(margin $\mathcal{R}_{crack}\geq 1$: the released wave "
+                 r"re-cracks the film)   --   " + _secondary_base_str(base))
+    plt.tight_layout()
+
+    paths = output_paths(output_dir)
+    stem = (f"secondary_map_lhat{lh:g}"
+            f"_Lam{Lam.min():g}-{Lam.max():g}"
+            f"_Gam{Gam.min():g}-{Gam.max():g}"
+            f"_{base.get('model', 'AT1')}_nm{base.get('n_modes', 'NA')}")
+    return _save_fig(fig, paths["png"], paths["pdf"], stem)
+
+
+def plot_secondary_regime_summary(sweep: dict,
+                                  output_dir: str | Path) -> tuple[str, str]:
+    """
+    Paper-style summary of the full ``(Lambda, Gamma, l_hat)`` sweep from
+    ``problems.secondary.trigger_map``.  A single ``(Lambda, Gamma)`` axis
+    carries the ``R_crack = 1`` secondary-cracking boundary for **every**
+    ``l_hat``, coloured by ``l_hat`` -- so the reader sees at a glance how the
+    third parameter shifts the boundary.  ``sweep["margin"]`` is the 3-D array
+    ``margin[h, i, j]`` (indices ``l_hat, Gamma, Lambda``).
+    """
+    Lam    = np.asarray(sweep["Lambda_bar"])
+    Gam    = np.asarray(sweep["Gamma"])
+    l_hats = np.atleast_1d(np.asarray(sweep["l_hat"], dtype=float))
+    M      = np.asarray(sweep["margin"])
+    base   = sweep.get("base_parameters", {})
+
+    import matplotlib as mpl
+    cmap = plt.get_cmap("viridis")
+    norm = mpl.colors.LogNorm(vmin=l_hats.min(), vmax=l_hats.max()) \
+        if l_hats.min() > 0 and l_hats.max() > l_hats.min() \
+        else mpl.colors.Normalize(vmin=l_hats.min(), vmax=l_hats.max() + 1e-12)
+
+    fig, ax = plt.subplots(figsize=(9, 6.5))
+    n_drawn = 0
+    for h, lh in enumerate(l_hats):
+        Mh = M[h]
+        if Mh.min() < 1.0 < Mh.max():
+            ax.contour(Lam, Gam, Mh, levels=[1.0],
+                       colors=[cmap(norm(lh))], linewidths=2.0)
+            n_drawn += 1
+
+    sm = mpl.cm.ScalarMappable(norm=norm, cmap=cmap)
+    sm.set_array([])
+    fig.colorbar(sm, ax=ax, label=r"$\hat\ell = \ell_d/\ell$")
+
+    ax.set_xlim(Lam.min(), Lam.max())
+    ax.set_ylim(Gam.min(), Gam.max())
+    ax.set_xlabel(r"$\Lambda = \ell_e/\ell$")
+    ax.set_ylabel(r"$\Gamma = \gamma\,\tau_{rt}$")
+    note = (r"each curve: $\mathcal{R}_{crack}=1$ boundary for one $\hat\ell$"
+            if n_drawn else
+            r"no boundary in range (all margins on one side of 1)")
+    ax.set_title(r"Secondary-cracking boundaries in the $(\Lambda,\Gamma)$ "
+                 r"plane" "\n"
+                 "below/left of a curve: secondary cracking; above/right: "
+                 "wave damped out\n"
+                 f"({note})   --   " + _secondary_base_str(base),
+                 fontsize=10)
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+
+    paths = output_paths(output_dir)
+    stem = (f"secondary_summary_lhat{l_hats.min():g}-{l_hats.max():g}"
+            f"_Lam{Lam.min():g}-{Lam.max():g}"
+            f"_Gam{Gam.min():g}-{Gam.max():g}"
+            f"_{base.get('model', 'AT1')}_nm{base.get('n_modes', 'NA')}")
     return _save_fig(fig, paths["png"], paths["pdf"], stem)
 
 

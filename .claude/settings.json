@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -)",
+      "Bash(python3 -c ' *)",
+      "Bash(timeout 300 jupyter nbconvert --to notebook --execute --inplace problems/secondary_theory.ipynb --ExecutePreprocessor.timeout=180)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(python -c \"import json,sys; nb=json.load\\(open\\('problems/secondary_theory.ipynb'\\)\\); [print\\('=== CELL',i,'===\\\\n'+''.join\\(c['source']\\)\\) for i,c in enumerate\\(nb['cells']\\) if any\\(k in ''.join\\(c['source']\\) for k in ['set_title','set_xlabel','set_ylabel','suptitle','plt.title','plt.xlabel','plt.ylabel']\\)]\")",
+      "Bash(python -c \"import json; nb=json.load\\(open\\('problems/secondary_theory.ipynb'\\)\\); print\\('total cells',len\\(nb['cells']\\)\\); [print\\(i, c['cell_type'], repr\\(''.join\\(c['source']\\)[:80]\\)\\) for i,c in enumerate\\(nb['cells']\\)]\")",
+      "Bash(python -c \"import json; nb=json.load\\(open\\('problems/secondary_theory.ipynb'\\)\\); [print\\('=== CELL',i,'===\\\\n'+''.join\\(nb['cells'][i]['source']\\)+'\\\\n'\\) for i in \\(9,11,13\\)]\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('tools/plotting.py'\\).read\\(\\)\\); print\\('plotting.py OK'\\)\")",
+      "Bash(python -c \"import json; json.load\\(open\\('problems/secondary_theory.ipynb'\\)\\); print\\('notebook JSON OK'\\)\")",
+      "Bash(python -)",
+      "Bash(~/miniconda3/envs/fenicsx-env/bin/python -)",
+      "Bash(~/miniconda3/envs/fenicsx-env/bin/python -c \"import tools.plotting as p\")",
+      "Bash(~/miniconda3/envs/fenicsx-env/bin/python -c ' *)",
+      "Bash(timeout 90 pdflatex -interaction=nonstopmode -halt-on-error main.tex)",
+      "Bash(echo \"exit=$?\")",
+      "Read(//tmp/**)",
+      "Bash(timeout 120 pdflatex -interaction=nonstopmode -halt-on-error main.tex)",
+      "Bash(echo \"pass1 exit=$?\")",
+      "Bash(echo \"pass2 exit=$?\")",
+      "Bash(awk 'NR>=378 && NR<=470' polytechnique.sty)",
+      "Bash(pdftotext -layout main.pdf -)",
+      "Bash(awk 'BEGIN{p=1} /\\\\f/{p++} END{}')",
+      "Bash(python3 -c \"import re,sys\")",
+      "Bash(pdfinfo main.pdf)",
+      "Bash(pdfimages -list main.pdf)",
+      "Bash(pdftoppm -png -r 60 -f 1 -l 2 main.pdf /tmp/tp)",
+      "Bash(timeout 150 pdflatex -interaction=nonstopmode -halt-on-error main.tex)",
+      "Bash(echo \"pass1=$?\")",
+      "Bash(echo \"pass2=$?\")",
+      "Bash(pdftoppm -png -r 70 -f 6 -l 6 main.pdf /tmp/p_intro)",
+      "Bash(pdftoppm -png -r 70 -f 12 -l 13 main.pdf /tmp/p_num)",
+      "Bash(ls -la /tmp/build_nb.py /tmp/dev_solver.py 2>&1 | head)"
+    ]
+  }
+}
