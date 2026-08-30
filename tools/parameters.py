@@ -33,11 +33,21 @@ problem file rather than changing a parameter here.)
 
 Loading parameters
 ------------------
-``U_max`` / ``theta_max`` -- *amplitude* of the load, reached at the canonical
-pseudo-time ``t = 1``: the QS ramp is ``U_max * t`` and the dynamic ramp
-``U_max * (tau/2)(1 + tanh(tau/T0))`` with ``tau = eta * t``.  Both reach the
-amplitude at ``t = 1`` (QS) / ``tau = 1`` (dynamic), so the final times are
-fixed: ``t_final_qs = 1`` and ``t_final_dyn = 1 / eta``.
+``U_max`` / ``theta_max`` -- *amplitude* of the load ramp itself (its shape
+and asymptote), not the point where a run stops.  The QS ramp is
+``U_max * t`` and the dynamic ramp ``U_max * (tau/2)(1 + tanh(tau/T0))``
+with ``tau = eta * t``.  Both reach the amplitude at ``t = 1`` (QS) /
+``tau = 1`` (dynamic; ``~94.6%`` of ``U_max`` in practice, since the dynamic
+ramp only approaches it asymptotically).
+``U_target`` / ``theta_target`` -- optional; *default* ``None`` (old
+behaviour: ``t_final_qs = 1``, ``t_final_dyn = 1 / eta``, as above).  Set
+this to stop a run early *without* touching ``U_max``/``theta_max`` (which
+would rescale the whole ramp equation): both branches then stop at the
+first pseudo-time each independently reaches this load, so QS and dynamic
+end at the *same* physical load instead of two different ones.  Must
+satisfy ``0 < U_target < U_max`` (dynamic ramp: strict, it never reaches
+its own asymptote at finite time). See ``_final_times()`` in
+``problems/dynamic.py`` / ``problems/thermal.py``.
 ``T0``                   -- smoothing length of the dynamic ramp.
 ``N_steps_qs`` / ``N_steps_dyn`` -- *number of steps* over each run.  The QS
 step is ``dt = 1 / N_steps_qs``; the dynamic step is stretched to
@@ -65,50 +75,61 @@ from copy import deepcopy
 
 
 # -----------------------------------------------------------------------------
+# Which problem to launch when this file is run directly
+# (``python tools/parameters.py``) -- see the bottom of the file for the
+# dispatch logic.  Everything else about the run (model, physics,
+# mesh_per_lhat, U_max/theta_max, U_target/theta_target, ...) is read from
+# the default dictionaries below; edit those, not this switch.
+# -----------------------------------------------------------------------------
+PROBLEM = "dynamic"   # "dynamic", "thermal", or "thermal_clamped"
+
+
+# -----------------------------------------------------------------------------
 # Defaults
 # -----------------------------------------------------------------------------
 DEFAULT_MODEL_PARAMETERS = {
     "l_hat":  0.02,
-    "Lambda": 3.0,
+    "Lambda": 0.0,
     "eta":    1.0e-2,
     "E_ref":  1.0,    # reference Young's modulus (for non-dimensionalisation)
     "nu":     0.3,    # Poisson's ratio (only used for 2D plane strain elasticity)
     # Viscous dissipation potential  Q = 0.5 * int( c1|u'|^2 + c2 eps(u'):C:eps(u') + c3|alpha'|^2 ):
-    "c1":     0.0e-3,    # local-velocity damping
-    "c2":     1.0e-3,    # strain-rate damping (Kelvin-Voigt, also a Cauchy stress component)
-    "c3":     1.0e-3,    # damage-rate damping (viscous regularisation of damage evolution)
+    "c1":     0.0,    # local-velocity damping
+    "c2":     0.0,    # strain-rate damping (Kelvin-Voigt, also a Cauchy stress component)
+    "c3":     0.01,    # damage-rate damping (viscous regularisation of damage evolution)
 }
 
 DEFAULT_MESH_PARAMETERS = {
     "physics":       "1D",          # "1D" or "2D"
-    "mesh_per_lhat": 4,             # cells per regularisation length
+    "mesh_per_lhat": 3,             # cells per regularisation length
     "Lx":            1.0,
     "Ly":            1.0,
 }
 
-# Loading settings shared by both problems (step counts, snapshots, fracture
-# marker).  Each problem dict below adds only its own amplitude (U_max /
-# theta_max) and ramp smoothing T0.
+# Loading settings shared by both problems (step counts, snapshots, ramp
+# smoothing).  Each problem dict below adds only its own amplitude
+# (U_max / theta_max) and optional target (U_target / theta_target).
 _COMMON_LOADING = {
-    "N_steps_qs":   60,             # number of quasi-static steps (dt = 1/N)
+    "T0":            0.7,           # smoothing length of the dynamic ramp
+    "N_steps_qs":   30,             # number of quasi-static steps (dt = 1/N)
     "N_steps_dyn": 180,             # number of dynamic steps
     "N_snapshots":   20,             # intermediate snapshots kept for plotting
 }
 
 DEFAULT_MECH_LOADING = {
-    "U_max":       1.0,
-    "T0":          0.7,
+    "U_max":       2.0,
+    "U_target":    0.65,            # set to stop QS+dyn at the same load < U_max
     **_COMMON_LOADING,
 }
 
 DEFAULT_THERM_LOADING = {
     "theta_max":   5.0,
-    "T0":          0.7,
+    "theta_target": None,           # set to stop QS+dyn at the same load < theta_max
     **_COMMON_LOADING,
 }
 
 DEFAULT_SOLVER_PARAMETERS = {
-    "model": "AT2",                 # "AT1" or "AT2"
+    "model": "AT1",                 # "AT1" or "AT2"
 }
 
 DEFAULT_ALTMIN_PARAMETERS = {
@@ -176,3 +197,33 @@ def filename_stub(physics_type: str, model: dict, mesh: dict,
         f"_nQS{loading['N_steps_qs']}_nDyn{loading['N_steps_dyn']}"
         f"_mpl{mpl}_T0{loading['T0']}"
     )
+
+
+# =============================================================================
+# Stand-alone execution -- run a problem straight from this file.
+# PROBLEM is set at the top of the file; everything else about the run comes
+# from the default dictionaries above.
+# =============================================================================
+if __name__ == "__main__":
+    # Deferred on purpose: problems/*.py import get_defaults from this file,
+    # so importing them at module level here would be a circular import.
+    import sys
+    from pathlib import Path
+    ROOT = Path(__file__).resolve().parents[1]
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+    if PROBLEM == "dynamic":
+        from problems.dynamic import run_problem
+        run_problem(**get_defaults("mechanical"))
+    elif PROBLEM == "thermal":
+        from problems.thermal import run_problem
+        run_problem(**get_defaults("thermal"))
+    elif PROBLEM == "thermal_clamped":
+        from problems.thermal_clamped import run_problem
+        run_problem(**get_defaults("thermal"))
+    else:
+        raise SystemExit(
+            f"Unknown PROBLEM {PROBLEM!r}; choose 'dynamic', 'thermal', "
+            f"or 'thermal_clamped'."
+        )

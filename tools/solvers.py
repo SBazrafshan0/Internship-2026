@@ -119,13 +119,54 @@ def critical_strain(model_name: str, Gc: float = 1.0, E_h: float = 1.0,
     finite elastic phase; AT2 (w'(0)=0) gives e_crit = 0 (no sub-critical
     regime), consistent with the table above.
 
-    NOTE: this uses the note's normalisation of the fracture term (Gc/ell_d,
-    no 1/c_w); ``ell_d`` plays the role of the regularisation length l_hat.
+    .. warning::
+       **Two normalisations of the fracture term coexist in this repository.**
+       This function uses the *concept note's* form
+       ``psi_d = (Gc/ell_d) w(a) + Gc ell_d |a_x|^2`` (no ``1/c_w``), whereas
+       :func:`fracture_energy_density` -- the one the FEM problems actually
+       assemble -- uses ``psi_d = (w(a) + l_hat^2 |grad a|^2) / c_w``.
+
+       The literature (Pham et al. 2011a; Tanne et al. 2018; and eq. (33) of
+       Leon Baldelli & Maurini, JMPS 152 (2021) 104424, in ``Articles/``)
+       calibrates the model through ``Gc = 4 c_w^lit w1 ell`` with
+       ``c_w^lit = int_0^1 sqrt(w(a)) da`` and the elastic limit
+       ``sigma_c = sqrt(w1 E)``.  The ``c_w`` stored in :data:`MODELS`
+       (8/3 for AT1, 2 for AT2) is exactly that ``4 c_w^lit``, so
+
+           FEM  (fracture_energy_density):  e_crit = sqrt(w'(0)/(c_w E))
+                                                   = sqrt(3/8) = 0.6124  (AT1)
+           here (note's normalisation):     e_crit = sqrt(Gc/(E ell_d))
+                                                   = 1.0                 (AT1)
+
+       i.e. a factor ``sqrt(8/3) = 1.633``.  **The FEM value is the one that
+       matches the literature calibration.**  More importantly the two have
+       *opposite* dependence on the regularisation length: here ``Gc`` is held
+       fixed and ``e_crit ~ 1/sqrt(ell_d)``, while in the FEM form ``e_crit``
+       is independent of ``l_hat`` and it is the effective toughness that
+       grows, ``Gc = l_hat``.  Sweeping ``l_hat`` therefore means *different
+       physical experiments* in the two settings -- rescale before comparing
+       the semi-analytic maps of ``problems/secondary.py`` with FEM runs.
     """
     m = get_model(model_name)
     wp0 = (float(m["w"](h)) - float(m["w"](0.0))) / h
     gp0 = (_g(h) - _g(0.0)) / h
     return math.sqrt(2.0 * Gc * wp0 / (E_h * ell_d * abs(gp0)))
+
+
+def damage_band_width(e_crit: float, Gc: float = 1.0, E_h: float = 1.0) -> float:
+    """Width of the damage band implied by a nucleation threshold.
+
+    Inverse of :func:`critical_strain` in the concept note's normalisation:
+    ``e_crit = sqrt(Gc / (E_h ell_d))`` for AT1, hence
+
+        ell_d = Gc / (E_h * e_crit**2).
+
+    A strain spike narrower than ``ell_d`` cannot nucleate anything, because a
+    real crack is a *band* of that width -- which is why the secondary-cracking
+    criterion has to be filtered over ``ell_d`` before it is applied
+    (see ``problems/secondary_theory.ipynb`` section 10).
+    """
+    return Gc / (E_h * e_crit ** 2)
 
 
 def fracture_energy_density(alpha, grad_alpha_sq, l_hat, model_name: str):

@@ -55,7 +55,9 @@ from tools.imports import (
     Path, tqdm,
 )
 from tools.helpers   import (
+    defect_seed,
     SNESProblem, make_linear_snes, make_damage_snes, alt_min_loop, print_mesh_info,
+    enforce_irreversibility,
     make_crack_counter, detect_crack_events,
 )
 from tools.meshing   import create_mesh_and_tags, grad_sq, strain
@@ -106,6 +108,57 @@ def _make_displacement_loaders(loading_parameters, eta):
              sp.lambdify(t_sp, A_dyn_sp, "numpy")))
 
 
+def _final_times(loading_parameters):
+    """Return ``(t_final_qs, tau_final_dyn)``, the pseudo-times at which the
+    QS and dynamic ramps stop.
+
+    Without ``U_target`` this is the old, hard-coded behaviour: QS stops at
+    ``t=1`` (load exactly ``U_max``) and the dynamic ramp stops at
+    ``tau=1`` (load ``~94.6%`` of ``U_max``) -- unchanged, so every existing
+    run reproduces bit for bit.
+
+    With ``U_target`` set (a *load*, not a time, and required to satisfy
+    ``0 < U_target < U_max`` since the dynamic ramp only *approaches*
+    ``U_max`` as ``tau -> infinity``) both branches instead stop at the
+    first pseudo-time each ramp reaches that load: ``t_final_qs =
+    U_target/U_max`` exactly (the QS ramp is linear), and ``tau_final_dyn``
+    is solved numerically by inverting the smoothed ramp -- the ramp's own
+    amplitude ``U_max`` and shape are untouched, only *how far along it*
+    each branch runs changes, so the two branches keep stopping at the same
+    physical load as each other.
+    """
+    U_target = loading_parameters.get("U_target")
+    if U_target is None:
+        return 1.0, 1.0
+
+    Umax_v = loading_parameters["U_max"]
+    if not (0.0 < U_target < Umax_v):
+        raise ValueError(
+            f"U_target={U_target!r} must satisfy 0 < U_target < "
+            f"U_max={Umax_v!r}: the dynamic ramp only approaches U_max as "
+            f"tau -> infinity, it never reaches it at finite time."
+        )
+    t_final_qs = U_target / Umax_v
+
+    T0_v = loading_parameters["T0"]
+
+    def _ramp(tau):
+        return Umax_v * (tau / 2.0) * (1.0 + np.tanh(tau / T0_v))
+
+    tau_hi = 1.0
+    while _ramp(tau_hi) < U_target:
+        tau_hi *= 2.0
+        if tau_hi > 1.0e6:
+            raise RuntimeError(
+                f"could not bracket tau for U_target={U_target!r}; "
+                f"check U_max and T0."
+            )
+    from scipy.optimize import brentq
+    tau_final_dyn = brentq(lambda tau: _ramp(tau) - U_target,
+                            0.0, tau_hi, xtol=1e-13, rtol=1e-13)
+    return t_final_qs, tau_final_dyn
+
+
 def _setup_function_spaces(domain, physics):
     V_alpha = fem.functionspace(domain, ("Lagrange", 1))
     if physics == "1D":
@@ -134,19 +187,48 @@ def run_problem(
     plot: bool = True,
     paraview: bool = True,
     output_dir: str | Path | None = None,
+    field_recorder=None,
+    defect: tuple | None = None,
+    branches: tuple = ("qs", "dyn"),
     verbose: bool = True,
 ) -> dict:
-    """Run one *quasi-static + dynamic* mechanical simulation."""
+    """Run one *quasi-static + dynamic* mechanical simulation.
+
+    ``field_recorder``, when given, is called at every converged step as
+    ``field_recorder(branch, load, u_array, alpha_array)`` with ``branch`` in
+    ``{"qs", "dyn"}``.  It lets a caller collect the *fields* (not just the
+    scalar histories) without changing anything else -- used by
+    :mod:`problems.eta_convergence` for the norm-based comparison.
+
+    ``branches`` selects which of the two evolutions to integrate; the other
+    one is returned as an empty history.  Default: both.
+
+    ``defect = (x0, width, alpha0)`` seeds a small pre-damage bump
+    ``alpha0 * exp(-((x-x0)/width)^2)`` as the initial irreversibility bound of
+    **both** branches.  A perfectly homogeneous bar with ``Lambda = 0`` has no
+    preferred crack site -- every position costs the same energy -- so the
+    evolution is non-unique and the quasi-static and dynamic branches localise
+    wherever the discretisation happens to push them.  A tiny imperfection
+    pins the crack and makes a *state*-based comparison well posed.
+    """
     # Geometry is a property of the *problem*, not a user-tunable knob.
     mesh_parameters["shape"] = _PROBLEM_SHAPE
+
+    # Which of the two branches to actually integrate.  Studies that only
+    # need the quasi-static path (mesh convergence, the spacing sweep) pass
+    # ``branches=("qs",)`` and pay half the cost; the skipped branch still
+    # returns its (empty) history dict so callers need no special case.
+    run_qs  = "qs" in branches
+    run_dyn = "dyn" in branches
 
     physics    = mesh_parameters["physics"]
     model_name = solver_parameters["model"]
     n_qs       = loading_parameters["N_steps_qs"]
     n_dyn      = loading_parameters["N_steps_dyn"]
-    # Canonical final pseudo-time: the QS linear ramp U_qs(t)=U_max*t reaches
-    # U_max at t=1, and the dynamic ramp reaches U_max at tau=eta*t=1 (t=1/eta).
-    t_final_qs  = 1.0
+    # Final pseudo-times for the two ramps.  Defaults (no U_target given) to
+    # the canonical t=1 / tau=1 pair, unchanged from before; see
+    # _final_times() for what U_target changes.
+    t_final_qs, tau_final_dyn = _final_times(loading_parameters)
     N_snap      = loading_parameters.get("N_snapshots", 6)
 
     if verbose and comm.rank == 0:
@@ -156,7 +238,7 @@ def run_problem(
             f"Lambda={model_parameters['Lambda']}, "
             f"eta={model_parameters['eta']}  |  "
             f"mesh_per_lhat={mesh_parameters.get('mesh_per_lhat', 4)}  |  "
-            f"n_QS={n_qs}, n_Dyn={n_dyn} (t_dyn_final={t_final_qs/float(model_parameters['eta']):.3g})"
+            f"n_QS={n_qs}, n_Dyn={n_dyn} (t_dyn_final={tau_final_dyn/float(model_parameters['eta']):.3g})"
         )
 
     # -------------------------------------------------------------------------
@@ -342,23 +424,23 @@ def run_problem(
     # -------------------------------------------------------------------------
     u.x.array[:] = 0.0; v.x.array[:] = 0.0; a.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
-    alpha_lb.x.array[:] = 0.0
+    alpha_lb.x.array[:] = defect_seed(V_alpha, defect)
     alpha_ub.x.array[:] = 1.0
 
     qs = {"t": [], "U": [], "F": [], "P_el": [], "P_f": [], "S": [], "total": [], "n_cracks": []}
     paraview_alpha_qs = []
     paraview_u_qs     = []
-    dt_qs = 1.0 / n_qs
-    n_qs_max = n_qs            # QS runs exactly n_qs steps (t = 0 -> t_final_qs=1)
+    dt_qs = t_final_qs / n_qs
+    n_qs_max = n_qs            # QS runs exactly n_qs steps (t = 0 -> t_final_qs)
     snap_every_qs = max(1, n_qs_max // max(1, N_snap))
     step_qs = 0
-    pbar_qs = tqdm(total=n_qs_max,
+    pbar_qs = tqdm(total=n_qs_max if run_qs else 0,
                    desc=f"QS  [{physics}|{model_name}]",
                    dynamic_ncols=True,
-                   disable=not (verbose and comm.rank == 0))
+                   disable=not (verbose and comm.rank == 0 and run_qs))
 
     t_cur = 0.0
-    while t_cur + 1e-12 < t_final_qs:
+    while run_qs and t_cur + 1e-12 < t_final_qs:
         t_cur += dt_qs
         u_right_val.value = float(U_qs_fn(t_cur))
         n_alt = alt_min_loop(solver_u_qs, u.x.petsc_vec,
@@ -366,7 +448,7 @@ def run_problem(
                              alpha_old_iter, error_L2_alpha_form,
                              AltMin_parameters["max_iter"], AltMin_parameters["tol"],
                              comm_=domain.comm)
-        alpha_lb.x.array[:] = alpha.x.array
+        enforce_irreversibility(alpha, alpha_lb)
 
         qs["t"].append(float(t_cur))
         qs["U"].append(float(u_right_val.value))
@@ -376,6 +458,9 @@ def run_problem(
         qs["S"].append(domain.comm.allreduce(fem.assemble_scalar(fracture_energy_form),     op=MPI.SUM))
         qs["total"].append(qs["P_el"][-1] + qs["P_f"][-1] + qs["S"][-1])
         qs["n_cracks"].append(count_cracks(alpha.x.array))
+        if field_recorder is not None:
+            field_recorder("qs", float(u_right_val.value),
+                           u.x.array.copy(), alpha.x.array.copy())
 
         a_max = _alpha_max(alpha, domain.comm)
         pbar_qs.update(1)
@@ -432,7 +517,7 @@ def run_problem(
     for fn in (u, u_new, v, v_new, a, a_new):
         fn.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
-    alpha_lb.x.array[:] = 0.0
+    alpha_lb.x.array[:] = defect_seed(V_alpha, defect)
     alpha_ub.x.array[:] = 1.0
 
     dyn = {"t": [], "U": [], "F": [], "K": [], "P_el": [], "P_f": [], "S": [],
@@ -440,11 +525,12 @@ def run_problem(
     paraview_alpha = []
     paraview_u     = []
 
-    # Time-scaling: the dynamic load uses tau = eta*t, so it reaches U_max at
-    # tau = 1, i.e. t = t_final_qs / eta.  We keep the requested number of steps
-    # (N_steps_dyn) and stretch the step size accordingly.
+    # Time-scaling: the dynamic load uses tau = eta*t, so t_final_dyn is
+    # tau_final_dyn/eta (tau_final_dyn=1 by default; see _final_times()).
+    # We keep the requested number of steps (N_steps_dyn) and stretch the
+    # step size accordingly.
     eta_v       = float(model_parameters["eta"])
-    t_final_dyn = t_final_qs / eta_v
+    t_final_dyn = tau_final_dyn / eta_v
     dt          = t_final_dyn / n_dyn
     delta_t_c.value = dt
     n_dyn_max   = n_dyn
@@ -452,14 +538,14 @@ def run_problem(
 
     diss_energy = 0.0
 
-    pbar_dyn = tqdm(total=n_dyn_max,
+    pbar_dyn = tqdm(total=n_dyn_max if run_dyn else 0,
                     desc=f"Dyn [{physics}|{model_name}]",
                     dynamic_ncols=True,
-                    disable=not (verbose and comm.rank == 0))
+                    disable=not (verbose and comm.rank == 0 and run_dyn))
 
     t_cur = 0.0
     step  = 0
-    while t_cur + 1e-12 < t_final_dyn:
+    while run_dyn and t_cur + 1e-12 < t_final_dyn:
         step += 1
         t_cur += dt
         u_right_val.value = float(U_dyn_fn(t_cur))
@@ -490,7 +576,7 @@ def run_problem(
         v.x.array[:] = v_new.x.array
         a.x.array[:] = a_new.x.array
         alpha_rate.x.array[:] = (alpha.x.array - alpha_lb.x.array) / dt
-        alpha_lb.x.array[:] = alpha.x.array
+        enforce_irreversibility(alpha, alpha_lb)
 
         dyn["t"].append(t_cur)
         dyn["U"].append(float(u_right_val.value))
@@ -500,15 +586,23 @@ def run_problem(
         dyn["P_el"].append(domain.comm.allreduce(fem.assemble_scalar(strain_energy_form),     op=MPI.SUM))
         dyn["P_f"].append(domain.comm.allreduce(fem.assemble_scalar(foundation_energy_form), op=MPI.SUM))
         dyn["S"].append(domain.comm.allreduce(fem.assemble_scalar(fracture_energy_form),     op=MPI.SUM))
-        # Cumulative dissipated energy: time integral of dissipated power (c1+c2 on u, c3 on alpha)
+        # Cumulative dissipated energy.  The assembled forms are the Rayleigh
+        # POTENTIAL Q (quadratic in the rates: c1+c2 on u, c3 on alpha).  The power
+        # actually removed is D_ydot Q . ydot = 2 Q by Euler's theorem for a
+        # degree-2 homogeneous function, so the accumulator carries a factor 2.
+        # The residual uses D_ydot Q directly and is unaffected -- do NOT move this
+        # factor into the forms above or the damping forces would double.
         diss_power_now = (domain.comm.allreduce(fem.assemble_scalar(dissipated_power_form),       op=MPI.SUM)
                         + domain.comm.allreduce(fem.assemble_scalar(dissipated_power_alpha_form), op=MPI.SUM))
-        diss_energy += dt * float(diss_power_now)
+        diss_energy += 2.0 * dt * float(diss_power_now)
         dyn["D"].append(diss_energy)
         # Stored dynamic total (K + P_el + P_f + S).  Dissipated energy D is a
         # separate curve, not folded into the stored total.
         dyn["total"].append(K_now + dyn["P_el"][-1] + dyn["P_f"][-1] + dyn["S"][-1])
         dyn["n_cracks"].append(count_cracks(alpha.x.array))
+        if field_recorder is not None:
+            field_recorder("dyn", float(u_right_val.value),
+                           u.x.array.copy(), alpha.x.array.copy())
 
         a_max = _alpha_max(alpha, domain.comm)
 
@@ -535,6 +629,7 @@ def run_problem(
     dyn_events = detect_crack_events(dyn["U"], dyn["S"], dyn["n_cracks"])
 
     x_alpha = V_alpha.tabulate_dof_coordinates()[:, 0]
+    x_u     = V_u.tabulate_dof_coordinates()[:, 0]
 
     for s in (solver_u_qs, solver_alpha_qs, solver_acc, solver_alpha_dyn):
         s.destroy()
@@ -545,6 +640,7 @@ def run_problem(
         "qs":               qs,
         "dyn":              dyn,
         "x_alpha":          x_alpha,
+        "x_u":              x_u,
         "alpha_qs_final":   alpha_qs_final,
         "alpha_dyn_final":  alpha_dyn_final,
         "qs_events":        qs_events,
@@ -586,12 +682,7 @@ def run_problem(
 # Stand-alone execution
 # =============================================================================
 if __name__ == "__main__":
-    cfg = get_defaults("mechanical")
-
-    # ----- edit *here* to switch model / physics --------------------------
-    cfg["solver_parameters"]["model"]   = "AT2"        # "AT1" or "AT2"
-    cfg["mesh_parameters"]["physics"]   = "2D"         # "1D"  or "2D"
-    cfg["mesh_parameters"]["mesh_per_lhat"] = 3        # cells per l_hat
-    # ----------------------------------------------------------------------
-
-    run_problem(**cfg)
+    # model / physics / mesh_per_lhat come straight from tools/parameters.py
+    # (DEFAULT_SOLVER_PARAMETERS, DEFAULT_MESH_PARAMETERS) -- edit *there* to
+    # switch them, rather than overriding here.
+    run_problem(**get_defaults("mechanical"))

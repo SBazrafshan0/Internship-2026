@@ -7,8 +7,8 @@ Usage
 -----
 ::
 
-    python sweep.py                # sweep the problem named in PROBLEM
-    python sweep.py thermal        # one-off override of the default
+    python problems/sweep.py                # sweep the problem named in PROBLEM
+    python problems/sweep.py thermal        # one-off override of the default
 
 The problem to sweep is set by editing the ``PROBLEM`` constant near the top
 of this file -- this way, adding a new problem in ``problems/`` and pointing
@@ -38,7 +38,7 @@ import sys
 import itertools
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -55,7 +55,7 @@ from problems import PROBLEMS
 # Which problem the sweep targets.  Change this single line when you add a new
 # problem to problems/__init__.py -- no other edits needed.  You can also pass
 # the problem name on the command line to override this default:
-#     python sweep.py thermal
+#     python problems/sweep.py thermal
 PROBLEM = "thermal"          # "dynamic" or "thermal" or any key of PROBLEMS
 
 SWEEP = {
@@ -174,8 +174,8 @@ def run_sweep(problem_name: str):
 # =============================================================================
 USAGE = (
     "Usage:\n"
-    "  python sweep.py            -- sweep the problem named in the PROBLEM constant\n"
-    "  python sweep.py <problem>  -- override the default once\n"
+    "  python problems/sweep.py            -- sweep the problem named in the PROBLEM constant\n"
+    "  python problems/sweep.py <problem>  -- override the default once\n"
     f"<problem> is one of: {sorted(PROBLEMS)}\n"
     "(Only one problem at a time -- there is no 'both' option.)"
 )

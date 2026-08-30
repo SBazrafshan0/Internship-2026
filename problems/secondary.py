@@ -81,7 +81,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.solvers import critical_strain
+from tools.solvers import critical_strain, damage_band_width
 from tools.plotting import (plot_secondary_run, plot_secondary_regime_map,
                             plot_secondary_regime_summary)
 
@@ -421,8 +421,8 @@ SECONDARY_PARAMETERS = {
     "E_h":     1.0,     # axial film stiffness     E_f * h_f
 
     # ---- the three control parameters of the note ---------------------------
-    "Lambda_bar":   0.1,     # Lambda = ell_e / ell  (transfer vs specimen length)
-    "Gamma":        10.0,    # damping number Gamma = gamma * tau_rt
+    "Lambda_bar":   1.05,     # Lambda = ell_e / ell  (transfer vs specimen length)
+    "Gamma":        0.6,    # damping number Gamma = gamma * tau_rt
     "l_hat":        0.1,     # l_hat = ell_d / ell  (damage vs specimen length)
 
     # ---- damage-nucleation threshold ----------------------------------------
@@ -454,3 +454,183 @@ if __name__ == "__main__":
     trigger_map(Lambda_bars=np.linspace(0.1, 2.0, 17),
                 Gammas=np.linspace(0.0, 2.0, 17),
                 l_hats=np.geomspace(0.01, 1.0, 9))
+
+
+# =============================================================================
+# Refinements of the criterion  (see secondary_theory.ipynb §10-§12)
+# =============================================================================
+# The pointwise test of `detect_secondary_trigger` has a defect: its maximum
+# always sits at the symmetry end x = ell, where sin(q_n ell) = +-1 for EVERY
+# mode while the strain coefficients decay only like 1/q_n.  The series is then
+# merely conditionally convergent (a Gibbs phenomenon), so `max|e|` keeps
+# drifting as modes are added and no converged number can be quoted.
+#
+# The cure is the physics the pointwise test left out: the phase-field model
+# also pays the gradient term Gc*ell_d*|alpha_x|^2, so a real crack is a damage
+# BAND of width ~ell_d and a spike narrower than that cannot nucleate anything.
+# Filtering the transient over ell_d removes the offending high-q tail and
+# makes the margin converge exactly.  With AT1 and Gc = E_h = 1 the width is
+# tied to the threshold, ell_d = 1/e_crit^2, so this adds NO free parameter.
+
+# cheap-but-converged resolution (the ell_d filter kills the high modes)
+FAST_PARAMETERS = {"n_modes": 80, "n_x": 400, "n_t": 2000, "n_roundtrips": 4.0}
+
+
+def strain_nonlocal(result, ell_d=None):
+    """Strain field low-pass filtered over the damage-band width ``ell_d``.
+
+    The filter is applied in **modal space** -- mode ``n`` is multiplied by
+    ``exp(-(q_n ell_d/2)^2 / 2)``, the transform of a Gaussian band of standard
+    deviation ``ell_d/2``.  Doing it modally (rather than convolving on the
+    grid) avoids any boundary artefact at the symmetry end ``x = ell``, which
+    is precisely where the peak sits.  Only the *transient* is filtered: the
+    static profile ``e_plus`` varies over ``ell_e`` and carries no high-q part.
+    """
+    if ell_d is None:
+        ell_d = damage_band_width(result["e_crit"])
+    q, x, t = result["q"], result["x"], result["t"]
+    a_nt = modal_evolution(result["a0"], result["omega"], result["gamma_bar"], t)
+    filt = np.exp(-0.5 * (q * (ell_d / 2.0)) ** 2)
+    v_x = -np.einsum("n,nx,nt->xt", q * filt, np.sin(np.outer(q, x)), a_nt)
+    return result["e_plus"][:, None] + v_x
+
+
+def R_local(result):
+    """Pointwise trigger margin ``max|e|/e_crit`` -- NOT modally convergent."""
+    m = result["x"] >= result["x_excl"]
+    return float(np.abs(result["e_xt"][m, :]).max() / result["e_crit"])
+
+
+def R_nonlocal(result, ell_d=None):
+    """Trigger margin on the ``ell_d``-filtered strain -- converges exactly."""
+    e = strain_nonlocal(result, ell_d)
+    m = result["x"] >= result["x_excl"]
+    return float(np.abs(e[m, :]).max() / result["e_crit"])
+
+
+def crack_site(result, ell_d=None):
+    """Position ``x`` of the non-local overshoot maximum (the next crack)."""
+    e = strain_nonlocal(result, ell_d)
+    m = result["x"] >= result["x_excl"]
+    env = np.abs(e[m, :]).max(axis=1)
+    return float(result["x"][m][int(np.argmax(env))])
+
+
+def run_fast(Lambda_bar, Gamma, e_crit=1.3, **over):
+    """One run at the cheap-but-converged resolution of :data:`FAST_PARAMETERS`."""
+    p = {**FAST_PARAMETERS, "Lambda_bar": float(Lambda_bar),
+         "Gamma": float(Gamma), "e_crit": float(e_crit)}
+    p.update(over)
+    return run_problem(p, plot=False, verbose=False)
+
+
+def margin_fields(Lambda_bars, Gammas, e_crit=1.3, verbose=True, **over):
+    """Both margins over the ``(Lambda, Gamma)`` plane -> ``(R_loc, R_nl)``,
+    each of shape ``(len(Gammas), len(Lambda_bars))``.
+
+    ``**over`` overrides the resolution of :data:`FAST_PARAMETERS`.  A map
+    is a sweep, not a converged single point: it is worth trading time
+    samples for grid points, and the ``ell_d`` filter removes exactly the
+    high modes that would demand the finer time step."""
+    Lambda_bars = np.asarray(Lambda_bars, float)
+    Gammas = np.asarray(Gammas, float)
+    Rl = np.zeros((Gammas.size, Lambda_bars.size))
+    Rn = np.zeros_like(Rl)
+    for i, G in enumerate(Gammas):
+        for j, L in enumerate(Lambda_bars):
+            r = run_fast(L, G, e_crit, **over)
+            Rl[i, j] = R_local(r)
+            Rn[i, j] = R_nonlocal(r)
+        if verbose:
+            print(f"  [margin_fields] Gamma row {i + 1}/{Gammas.size} done")
+    return Rl, Rn
+
+
+def overshoot_undamped(Lambda_bars, e_crit=1.3, nonlocal_=True, verbose=True,
+                       **over):
+    """``A(Lambda) = max|e|/theta`` at ``Gamma = 0`` -- the ceiling on the
+    dynamic overshoot.  A second crack is possible **only if**
+    ``e_crit/theta < A(Lambda)``; no damping can rescue a tougher film."""
+    Lambda_bars = np.asarray(Lambda_bars, float)
+    A = np.zeros_like(Lambda_bars)
+    for k, L in enumerate(Lambda_bars):
+        r = run_fast(L, 0.0, e_crit, **over)
+        th = r["parameters"]["theta"]
+        if nonlocal_:
+            e = strain_nonlocal(r)
+            m = r["x"] >= r["x_excl"]
+            A[k] = np.abs(e[m, :]).max() / th
+        else:
+            A[k] = R_local(r) * r["e_crit"] / th
+        if verbose and (k + 1) % 5 == 0:
+            print(f"  [overshoot] {k + 1}/{Lambda_bars.size}")
+    return A
+
+
+def l_hat_min(Lambda_bars, A):
+    """Smallest damage-length ratio for which a second crack is still possible.
+
+    With ``ell_e = theta = 1``: ``ell = 1/Lambda``, ``ell_d = l_hat*ell`` and
+    ``e_crit = 1/sqrt(ell_d) = sqrt(Lambda/l_hat)``.  Requiring
+    ``e_crit < A`` gives ``l_hat > Lambda / A**2``.
+    """
+    return np.asarray(Lambda_bars, float) / np.asarray(A, float) ** 2
+
+
+def cascade(F0=32.0, gamma_phys=0.005, e_crit=1.3, max_gen=8,
+            ell_e=1.0, c=1.0, verbose=True):
+    """Recursive fragmentation from one fragment of **full** length ``F0``.
+
+    Fixed: ``ell_e``, the physical damping rate ``gamma_phys`` and ``e_crit``.
+    A fragment of full length ``F`` is free at both ends, so its mirror plane
+    sits at ``F/2`` and it is analysed as a half-specimen of length ``L = F/2``:
+    ``Lambda = ell_e/L`` and ``Gamma = gamma_phys * 2*sqrt(2) * L / c``.
+    A shrinking fragment therefore has a *larger* ``Lambda`` (less stored
+    energy) but a *smaller* ``Gamma`` (less damping per round trip); the
+    cascade stops when the first effect wins.
+
+    NOTE: each generation is analysed as a *fresh* problem (uniform pre-stress,
+    zero velocity).  In reality the daughters inherit the parent's vibration,
+    so this predicts the saturation size well but not a literal time history --
+    see :mod:`problems.secondary_wave` for the direct simulation.
+    """
+    ell_d = damage_band_width(e_crit)
+    F_min = 4.0 * ell_d
+    frags = [float(F0)]
+    history = [list(frags)]
+    events = []
+
+    for gen in range(max_gen):
+        new, cracked = [], 0
+        for F in frags:
+            if F < F_min:
+                new.append(F)
+                continue
+            L = 0.5 * F
+            Lam = ell_e / L
+            Gam = gamma_phys * 2.0 * np.sqrt(2.0) * L / c
+            r = run_fast(Lam, Gam, e_crit)
+            R = R_nonlocal(r)
+            if R >= 1.0:
+                xs = crack_site(r)
+                if L - xs < ell_d:              # one crack on the mirror plane
+                    pieces = [L, L]
+                else:                           # two mirror cracks
+                    pieces = [xs, F - 2.0 * xs, xs]
+                new += [p for p in pieces if p > 1e-9]
+                cracked += 1
+                events.append({"gen": gen, "F": F, "Lambda": Lam, "Gamma": Gam,
+                               "R": R, "x_crack": xs})
+            else:
+                new.append(F)
+        history.append(list(new))
+        if verbose:
+            print(f"  [cascade] generation {gen}: {len(frags)} -> {len(new)} "
+                  f"fragments ({cracked} cracked)")
+        if cracked == 0:
+            break
+        frags = new
+
+    return {"F0": F0, "gamma_phys": gamma_phys, "e_crit": e_crit,
+            "ell_d": ell_d, "history": history, "final": np.array(frags),
+            "events": events}

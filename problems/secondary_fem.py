@@ -1,39 +1,52 @@
 """
-problems/thermal.py
-===================
-**Thermal** phase-field fragmentation problem.
+problems/secondary_fem.py
+=========================
+:mod:`problems.thermal` set up as the *initial-value* problem that the
+semi-analytic wave model of :mod:`problems.secondary` solves, so that the two
+can be compared on the same configuration.
 
-Geometry & loading
-------------------
-* Bar :math:`[0, L_x]` (1D) or *unstructured* triangulation of
-  :math:`[0, L_x]\\times[0, L_y]` (2D, Gmsh-generated).  Mesh resolution
-  driven by ``mesh_per_lhat``.
-* Free ends in displacement; the foundation alone removes the rigid body
-  motion.
-* Uniform thermal eigenstrain :math:`\\theta(t)`.  Two histories are used:
-  the quasi-static branch is the linear ramp ``theta_qs(t) = theta_max * t``;
-  the dynamic branch is the smoothed ramp ``theta_dyn(t) =
-  theta_max * (tau/2) * (1 + tanh(tau/T0))`` with ``tau = eta * t``.  ``eta``
-  is the dynamic loading time-scale only (it no longer multiplies the mass
-  term), so the dynamic run extends to ``t_final_dyn = 1 / eta`` (the load
-  reaches ``theta_max`` at ``tau=eta*t=1``).
-* Damage free at every boundary.
+The wave model releases a traction-free face at t = 0 in a film held at fixed
+pre-stress and asks whether the released pulse nucleates a second crack.  The
+thermal problem ramps the load and lets the first crack nucleate on its own, so
+three things must change for the two to describe the same experiment:
 
-Termination
------------
-Both loops are purely time-driven (a fixed number of steps): the QS loop
-runs ``t = 0 -> 1`` (``N_steps_qs`` steps, load reaches ``theta_max`` at
-``t=1``) and the Dyn loop runs ``t = 0 -> 1/eta`` (``N_steps_dyn`` steps, load
-reaches ``theta_max`` at ``tau=eta*t=1``).  Crack-nucleation *generations* are
-detected afterwards (surface-energy jumps, labelled by the connected
-damaged-region count) and marked on the energy plot; they do not stop the run.
+1.  the eigenstrain is held constant rather than ramped;
+2.  the run starts from u = 0 with a fully developed crack already present at
+    x = 0, which is the wave model's initial condition;
+3.  only c1 is used.  The wave model's single damping is gamma = zeta/(2m),
+    which is mass-proportional, and c1 is its finite-element counterpart.
+    c2 removes two orders of magnitude more of the released pulse at the
+    same coefficient value, so a run with c2
+    active carries dissipation the wave model does not have and cannot be
+    compared with it.
 
-Switches
---------
-``solver_parameters["model"]`` -- ``"AT1"`` or ``"AT2"``.
-``mesh_parameters["physics"]`` -- ``"1D"`` or ``"2D"``.
-(The geometry is fixed per problem file via ``_PROBLEM_SHAPE`` -- not a switch.)
-"""
+Everything else is the trusted thermal problem.  The hunks that differ are
+marked in place; with ``pre_crack`` absent only the constant load remains.
+
+Parameter map::
+
+    wave model                     finite elements
+    ----------------------------   -------------------------
+    ell_e / L                      1 / (Lambda * L)
+    Gamma = gamma * tau_rt         gamma = c1 / 2
+    l_hat = ell_d / L              l_hat
+    t_final = N * tau_rt           eta = 1 / (N * tau_rt)
+
+THE LOAD DOES NOT MAP DIRECTLY.  The two models use two different
+normalisations of the fracture term, and the difference bites here:
+
+    wave model:  e_crit = 1/sqrt(ell_d) varies with the internal length, and
+                 the load is fixed at theta = 1;
+    this file:   e_c = 1/sqrt(c_w) = 0.6124 is FIXED, and the load is chosen.
+
+Copying theta = 1 across therefore puts the film above its own elastic limit
+before the released wave does anything: the pre-stress |e| = theta = 1 exceeds
+e_c = 0.6124, the bar damages homogeneously at t = 0, and the run returns the
+damage plateau of Section 4.1.2 rather than a crack pattern.  What must be
+preserved is the *ratio*, so for the wave-model runs at e_crit/theta = 1.3,
+
+    theta = e_c / 1.3 = 0.6124 / 1.3 = 0.4711 .
+"""""
 
 from __future__ import annotations
 import sys
@@ -48,9 +61,7 @@ from tools.imports import (
     Path, tqdm,
 )
 from tools.helpers   import (
-    defect_seed,
     SNESProblem, make_linear_snes, make_damage_snes, alt_min_loop, print_mesh_info,
-    enforce_irreversibility,
     make_crack_counter, detect_crack_events,
 )
 from tools.meshing   import create_mesh_and_tags, grad_sq, strain, elastic_strain
@@ -86,63 +97,14 @@ def _make_thermal_loaders(loading_parameters, eta):
 
     Theta_qs_sp  = ThMax_v * t_sp
 
+    # DIFFERENCE FROM thermal.py (1 of 3).  The wave model holds the eigenstrain
+    # FIXED and releases a crack face at t = 0; it has no loading ramp.  The
+    # dynamic branch must do the same, so theta_dyn is the constant theta_max.
     tau          = eta * t_sp
-    Theta_dyn_sp = ThMax_v * (tau / 2.0) * (1.0 + sp.tanh(tau / T0_v))
+    Theta_dyn_sp = ThMax_v + 0.0 * tau
 
     return (sp.lambdify(t_sp, Theta_qs_sp, "numpy"),
             sp.lambdify(t_sp, Theta_dyn_sp, "numpy"))
-
-
-def _final_times(loading_parameters):
-    """Return ``(t_final_qs, tau_final_dyn)``, the pseudo-times at which the
-    QS and dynamic ramps stop.
-
-    Without ``theta_target`` this is the old, hard-coded behaviour: QS stops
-    at ``t=1`` (load exactly ``theta_max``) and the dynamic ramp stops at
-    ``tau=1`` (load ``~94.6%`` of ``theta_max``) -- unchanged, so every
-    existing run reproduces bit for bit.
-
-    With ``theta_target`` set (a *load*, not a time, and required to satisfy
-    ``0 < theta_target < theta_max`` since the dynamic ramp only
-    *approaches* ``theta_max`` as ``tau -> infinity``) both branches instead
-    stop at the first pseudo-time each ramp reaches that load:
-    ``t_final_qs = theta_target/theta_max`` exactly (the QS ramp is
-    linear), and ``tau_final_dyn`` is solved numerically by inverting the
-    smoothed ramp -- the ramp's own amplitude ``theta_max`` and shape are
-    untouched, only *how far along it* each branch runs changes, so the two
-    branches keep stopping at the same physical load as each other.
-    """
-    theta_target = loading_parameters.get("theta_target")
-    if theta_target is None:
-        return 1.0, 1.0
-
-    ThMax_v = loading_parameters["theta_max"]
-    if not (0.0 < theta_target < ThMax_v):
-        raise ValueError(
-            f"theta_target={theta_target!r} must satisfy 0 < theta_target < "
-            f"theta_max={ThMax_v!r}: the dynamic ramp only approaches "
-            f"theta_max as tau -> infinity, it never reaches it at finite "
-            f"time."
-        )
-    t_final_qs = theta_target / ThMax_v
-
-    T0_v = loading_parameters["T0"]
-
-    def _ramp(tau):
-        return ThMax_v * (tau / 2.0) * (1.0 + np.tanh(tau / T0_v))
-
-    tau_hi = 1.0
-    while _ramp(tau_hi) < theta_target:
-        tau_hi *= 2.0
-        if tau_hi > 1.0e6:
-            raise RuntimeError(
-                f"could not bracket tau for theta_target={theta_target!r}; "
-                f"check theta_max and T0."
-            )
-    from scipy.optimize import brentq
-    tau_final_dyn = brentq(lambda tau: _ramp(tau) - theta_target,
-                            0.0, tau_hi, xtol=1e-13, rtol=1e-13)
-    return t_final_qs, tau_final_dyn
 
 
 def _setup_function_spaces(domain, physics):
@@ -172,42 +134,20 @@ def run_problem(
     plot: bool = True,
     paraview: bool = True,
     output_dir: str | Path | None = None,
-    field_recorder=None,
-    defect: tuple | None = None,
-    branches: tuple = ("qs", "dyn"),
     verbose: bool = True,
 ) -> dict:
-    """One *quasi-static + dynamic* thermal fragmentation run.
-
-    ``field_recorder``, when given, is called at every converged step as
-    ``field_recorder(branch, load, u_array, alpha_array)`` with ``branch`` in
-    ``{"qs", "dyn"}`` -- see :mod:`problems.eta_convergence`.
-
-    ``branches`` selects which of the two evolutions to integrate; the other
-    one is returned as an empty history.  Default: both.
-
-    ``defect = (x0, width, alpha0)`` seeds a small pre-damage imperfection as
-    the initial irreversibility bound of both branches; see
-    :func:`tools.helpers.defect_seed` for why that is needed.
-    """
+    """One *quasi-static + dynamic* thermal fragmentation run."""
     # Geometry is a property of the *problem*, not a user-tunable knob.
     mesh_parameters["shape"] = _PROBLEM_SHAPE
-
-    # Which of the two branches to actually integrate.  Studies that only
-    # need the quasi-static path (mesh convergence, the spacing sweep) pass
-    # ``branches=("qs",)`` and pay half the cost; the skipped branch still
-    # returns its (empty) history dict so callers need no special case.
-    run_qs  = "qs" in branches
-    run_dyn = "dyn" in branches
 
     physics    = mesh_parameters["physics"]
     model_name = solver_parameters["model"]
     n_qs       = loading_parameters["N_steps_qs"]
     n_dyn      = loading_parameters["N_steps_dyn"]
-    # Final pseudo-times for the two ramps.  Defaults (no theta_target given)
-    # to the canonical t=1 / tau=1 pair, unchanged from before; see
-    # _final_times() for what theta_target changes.
-    t_final_qs, tau_final_dyn = _final_times(loading_parameters)
+    # Canonical final pseudo-time: the QS linear ramp theta_qs(t)=theta_max*t
+    # reaches theta_max at t=1, and the dynamic ramp reaches theta_max at
+    # tau=eta*t=1 (t=1/eta).
+    t_final_qs  = 1.0
     N_snap      = loading_parameters.get("N_snapshots", 6)
 
     if verbose and comm.rank == 0:
@@ -217,7 +157,7 @@ def run_problem(
             f"Lambda={model_parameters['Lambda']}, "
             f"eta={model_parameters['eta']}  |  "
             f"mesh_per_lhat={mesh_parameters.get('mesh_per_lhat', 4)}  |  "
-            f"n_QS={n_qs}, n_Dyn={n_dyn} (t_dyn_final={tau_final_dyn/float(model_parameters['eta']):.3g})"
+            f"n_QS={n_qs}, n_Dyn={n_dyn} (t_dyn_final={t_final_qs/float(model_parameters['eta']):.3g})"
         )
 
     # -------------------------------------------------------------------------
@@ -350,7 +290,7 @@ def run_problem(
     # -------------------------------------------------------------------------
     u.x.array[:] = 0.0; v.x.array[:] = 0.0; a.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
-    alpha_lb.x.array[:] = defect_seed(V_alpha, defect)
+    alpha_lb.x.array[:] = 0.0
     alpha_ub.x.array[:] = 1.0
     theta_c.value = 0.0
 
@@ -358,17 +298,17 @@ def run_problem(
     qs_snapshots = []
     paraview_alpha_qs = []
     paraview_u_qs     = []
-    dt_qs = t_final_qs / n_qs
-    n_qs_max = n_qs            # QS runs exactly n_qs steps (t = 0 -> t_final_qs)
+    dt_qs = 1.0 / n_qs
+    n_qs_max = n_qs            # QS runs exactly n_qs steps (t = 0 -> t_final_qs=1)
     snap_every_qs = max(1, n_qs_max // max(1, N_snap))
-    pbar_qs = tqdm(total=n_qs_max if run_qs else 0,
+    pbar_qs = tqdm(total=n_qs_max,
                    desc=f"QS  [{physics}|{model_name}]",
                    dynamic_ncols=True,
-                   disable=not (verbose and comm.rank == 0 and run_qs))
+                   disable=not (verbose and comm.rank == 0))
 
     t_cur = 0.0
     i = 0
-    while run_qs and t_cur + 1e-12 < t_final_qs:
+    while t_cur + 1e-12 < t_final_qs:
         i += 1
         t_cur += dt_qs
         theta_c.value = float(Theta_qs_fn(t_cur))
@@ -377,7 +317,7 @@ def run_problem(
                              alpha_old_iter, error_L2_alpha_form,
                              AltMin_parameters["max_iter"], AltMin_parameters["tol"],
                              comm_=domain.comm)
-        enforce_irreversibility(alpha, alpha_lb)
+        alpha_lb.x.array[:] = alpha.x.array
 
         qs["t"].append(float(t_cur))
         qs["theta"].append(float(theta_c.value))
@@ -387,9 +327,6 @@ def run_problem(
         qs["S"].append(domain.comm.allreduce(fem.assemble_scalar(fracture_energy_form),        op=MPI.SUM))
         qs["total"].append(qs["P_el"][-1] + qs["P_f"][-1] + qs["S"][-1])
         qs["n_cracks"].append(count_cracks(alpha.x.array))
-        if field_recorder is not None:
-            field_recorder("qs", float(theta_c.value),
-                           u.x.array.copy(), alpha.x.array.copy())
 
         a_max = _alpha_max(alpha, domain.comm)
         pbar_qs.update(1)
@@ -449,7 +386,7 @@ def run_problem(
     for fn in (u, u_new, v, v_new, a, a_new):
         fn.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
-    alpha_lb.x.array[:] = defect_seed(V_alpha, defect)
+    alpha_lb.x.array[:] = 0.0
     alpha_ub.x.array[:] = 1.0
     theta_c.value = 0.0
 
@@ -458,12 +395,11 @@ def run_problem(
     dyn_snapshots = []
     paraview_alpha = []
     paraview_u     = []
-    # Time-scaling: the dynamic load uses tau = eta*t, so t_final_dyn is
-    # tau_final_dyn/eta (tau_final_dyn=1 by default; see _final_times()).
-    # We keep the requested number of steps (N_steps_dyn) and stretch the
-    # step size accordingly.
+    # Time-scaling: the dynamic load uses tau = eta*t, so it reaches theta_max
+    # at tau = 1, i.e. t = t_final_qs / eta.  We keep the requested number of
+    # steps (N_steps_dyn) and stretch the step size accordingly.
     eta_v          = float(model_parameters["eta"])
-    t_final_dyn    = tau_final_dyn / eta_v
+    t_final_dyn    = t_final_qs / eta_v
     dt             = t_final_dyn / n_dyn
     delta_t_c.value = dt
     n_dyn_max      = n_dyn
@@ -471,14 +407,31 @@ def run_problem(
 
     diss_energy = 0.0
 
-    pbar_dyn = tqdm(total=n_dyn_max if run_dyn else 0,
+    # DIFFERENCE FROM thermal.py (2 of 3).  Start from the state the wave model
+    # starts from: the film has NOT moved (u = 0, so the elastic strain is the
+    # uniform pre-stress e = -theta everywhere) but a crack already exists at
+    # x = 0.  The crack is written as the fully developed AT1 band
+    # alpha = (1 - |x|/2 l_hat)^2, the AT1 optimal profile, and is
+    # imposed through the irreversibility bound so the solver cannot undo it.
+    if model_parameters.get("pre_crack", False):
+        xa = V_alpha.tabulate_dof_coordinates()[:, 0]
+        lh = float(model_parameters["l_hat"])
+        band = np.clip(1.0 - np.abs(xa) / (2.0 * lh), 0.0, 1.0) ** 2
+        alpha.x.array[:] = band
+        alpha_lb.x.array[:] = band
+        theta_c.value = float(loading_parameters["theta_max"])
+        if verbose and comm.rank == 0:
+            print(f"  [IC] pre-crack at x=0: {int((band > 0.5).sum())} dofs with "
+                  f"alpha>0.5; theta held at {loading_parameters['theta_max']:g}")
+
+    pbar_dyn = tqdm(total=n_dyn_max,
                     desc=f"Dyn [{physics}|{model_name}]",
                     dynamic_ncols=True,
-                    disable=not (verbose and comm.rank == 0 and run_dyn))
+                    disable=not (verbose and comm.rank == 0))
 
     t_cur = 0.0
     step = 0
-    while run_dyn and t_cur + 1e-12 < t_final_dyn:
+    while t_cur + 1e-12 < t_final_dyn:
         step += 1
         t_cur += dt
         theta_c.value = float(Theta_dyn_fn(t_cur))
@@ -505,7 +458,7 @@ def run_problem(
         v.x.array[:] = v_new.x.array
         a.x.array[:] = a_new.x.array
         alpha_rate.x.array[:] = (alpha.x.array - alpha_lb.x.array) / dt
-        enforce_irreversibility(alpha, alpha_lb)
+        alpha_lb.x.array[:] = alpha.x.array
 
         dyn["t"].append(t_cur)
         dyn["theta"].append(float(theta_c.value))
@@ -529,9 +482,6 @@ def run_problem(
         # separate curve, not folded into the stored total.
         dyn["total"].append(K_now + dyn["P_el"][-1] + dyn["P_f"][-1] + dyn["S"][-1])
         dyn["n_cracks"].append(count_cracks(alpha.x.array))
-        if field_recorder is not None:
-            field_recorder("dyn", float(theta_c.value),
-                           u.x.array.copy(), alpha.x.array.copy())
 
         a_max = _alpha_max(alpha, domain.comm)
 
@@ -562,11 +512,6 @@ def run_problem(
     dyn_events = detect_crack_events(dyn["theta"], dyn["S"], dyn["n_cracks"])
 
     x_alpha = V_alpha.tabulate_dof_coordinates()[:, 0]
-    # The full coordinates as well: keeping only x silently discards y, and a
-    # caller plotting a 2D field then has no way to recover it.  Added as a new
-    # key so that nothing reading x_alpha changes.
-    xy_alpha = V_alpha.tabulate_dof_coordinates()[:, :2]
-    x_u     = V_u.tabulate_dof_coordinates()[:, 0]
 
     for s in (solver_u_qs, solver_alpha_qs, solver_acc, solver_alpha_dyn):
         s.destroy()
@@ -577,8 +522,6 @@ def run_problem(
         "qs":               qs,
         "dyn":              dyn,
         "x_alpha":          x_alpha,
-        "xy_alpha":         xy_alpha,
-        "x_u":              x_u,
         "alpha_qs_final":   alpha_qs_final,
         "alpha_dyn_final":  alpha_dyn_final,
         "qs_snapshots":     qs_snapshots,
@@ -623,7 +566,12 @@ def run_problem(
 # Stand-alone execution
 # =============================================================================
 if __name__ == "__main__":
-    # model / physics / mesh_per_lhat come straight from tools/parameters.py
-    # (DEFAULT_SOLVER_PARAMETERS, DEFAULT_MESH_PARAMETERS) -- edit *there* to
-    # switch them, rather than overriding here.
-    run_problem(**get_defaults("thermal"))
+    cfg = get_defaults("thermal")
+
+    # ----- edit *here* to switch model / physics --------------------------
+    cfg["solver_parameters"]["model"]   = "AT1"        # "AT1" or "AT2"
+    cfg["mesh_parameters"]["physics"]   = "1D"         # "1D"  or "2D"
+    cfg["mesh_parameters"]["mesh_per_lhat"] = 3
+    # ----------------------------------------------------------------------
+
+    run_problem(**cfg)

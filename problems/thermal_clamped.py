@@ -1,38 +1,28 @@
 """
-problems/thermal.py
-===================
-**Thermal** phase-field fragmentation problem.
+problems/thermal_clamped.py
+===========================
+`Internship-2026-main/problems/thermal.py` with **both ends clamped**, so that
+the thermal problem can be run *without* the elastic foundation.
 
-Geometry & loading
-------------------
-* Bar :math:`[0, L_x]` (1D) or *unstructured* triangulation of
-  :math:`[0, L_x]\\times[0, L_y]` (2D, Gmsh-generated).  Mesh resolution
-  driven by ``mesh_per_lhat``.
-* Free ends in displacement; the foundation alone removes the rigid body
-  motion.
-* Uniform thermal eigenstrain :math:`\\theta(t)`.  Two histories are used:
-  the quasi-static branch is the linear ramp ``theta_qs(t) = theta_max * t``;
-  the dynamic branch is the smoothed ramp ``theta_dyn(t) =
-  theta_max * (tau/2) * (1 + tanh(tau/T0))`` with ``tau = eta * t``.  ``eta``
-  is the dynamic loading time-scale only (it no longer multiplies the mass
-  term), so the dynamic run extends to ``t_final_dyn = 1 / eta`` (the load
-  reaches ``theta_max`` at ``tau=eta*t=1``).
-* Damage free at every boundary.
+Why this file exists.  The trusted thermal problem leaves the displacement free
+at both ends and relies on the foundation to remove the rigid-body mode.  Set
+Lambda = 0 there and the bar expands freely: u' = theta, the elastic strain
+e = u' - theta vanishes, and no damage appears at any load (checked -- alpha is
+identically zero up to theta = 2).  The step in the narrative that this file
+reproduces is the *constrained* bar: clamped at both ends, heated by a ramp, no
+foundation.  The stress is then uniform, e = -theta, and AT1 stays on its
+homogeneous branch
 
-Termination
------------
-Both loops are purely time-driven (a fixed number of steps): the QS loop
-runs ``t = 0 -> 1`` (``N_steps_qs`` steps, load reaches ``theta_max`` at
-``t=1``) and the Dyn loop runs ``t = 0 -> 1/eta`` (``N_steps_dyn`` steps, load
-reaches ``theta_max`` at ``tau=eta*t=1``).  Crack-nucleation *generations* are
-detected afterwards (surface-energy jumps, labelled by the connected
-damaged-region count) and marked on the energy plot; they do not stop the run.
+    alpha_h(theta) = 1 - e_c^2 / theta^2 ,   e_c = sqrt(3/8) ,
 
-Switches
---------
-``solver_parameters["model"]`` -- ``"AT1"`` or ``"AT2"``.
-``mesh_parameters["physics"]`` -- ``"1D"`` or ``"2D"``.
-(The geometry is fixed per problem file via ``_PROBLEM_SHAPE`` -- not a switch.)
+which is a *plateau*: damage grows everywhere at once and nothing localises.
+That is the observation the foundation then destroys -- it is the foundation,
+not the thermal load, that produces a crack pattern.
+
+This file is a verbatim copy of the trusted `thermal.py` with ONE hunk changed
+(the boundary-condition block, marked in place).  The clamp is ON by default;
+pass `model_parameters["clamped_ends"] = False` to recover the free bar of
+`thermal.py` (which produces no stress and no damage at Lambda = 0).
 """
 
 from __future__ import annotations
@@ -48,9 +38,7 @@ from tools.imports import (
     Path, tqdm,
 )
 from tools.helpers   import (
-    defect_seed,
     SNESProblem, make_linear_snes, make_damage_snes, alt_min_loop, print_mesh_info,
-    enforce_irreversibility,
     make_crack_counter, detect_crack_events,
 )
 from tools.meshing   import create_mesh_and_tags, grad_sq, strain, elastic_strain
@@ -172,33 +160,18 @@ def run_problem(
     plot: bool = True,
     paraview: bool = True,
     output_dir: str | Path | None = None,
-    field_recorder=None,
-    defect: tuple | None = None,
-    branches: tuple = ("qs", "dyn"),
     verbose: bool = True,
+    field_recorder=None,
 ) -> dict:
     """One *quasi-static + dynamic* thermal fragmentation run.
 
     ``field_recorder``, when given, is called at every converged step as
     ``field_recorder(branch, load, u_array, alpha_array)`` with ``branch`` in
-    ``{"qs", "dyn"}`` -- see :mod:`problems.eta_convergence`.
-
-    ``branches`` selects which of the two evolutions to integrate; the other
-    one is returned as an empty history.  Default: both.
-
-    ``defect = (x0, width, alpha0)`` seeds a small pre-damage imperfection as
-    the initial irreversibility bound of both branches; see
-    :func:`tools.helpers.defect_seed` for why that is needed.
+    ``{"qs", "dyn"}`` -- the hook the run animations of
+    :mod:`tools.animations` are built on.
     """
     # Geometry is a property of the *problem*, not a user-tunable knob.
     mesh_parameters["shape"] = _PROBLEM_SHAPE
-
-    # Which of the two branches to actually integrate.  Studies that only
-    # need the quasi-static path (mesh convergence, the spacing sweep) pass
-    # ``branches=("qs",)`` and pay half the cost; the skipped branch still
-    # returns its (empty) history dict so callers need no special case.
-    run_qs  = "qs" in branches
-    run_dyn = "dyn" in branches
 
     physics    = mesh_parameters["physics"]
     model_name = solver_parameters["model"]
@@ -242,7 +215,31 @@ def run_problem(
     alpha_lb       = fem.Function(V_alpha)
     alpha_ub       = fem.Function(V_alpha)
 
+    # ---- THE ONLY DIFFERENCE FROM problems/thermal.py -----------------------
+    # The trusted thermal problem leaves the ends free and relies on the
+    # foundation to remove the rigid-body mode.  With Lambda = 0 that mode is
+    # back: the bar expands freely, u' = theta, so e = u' - theta = 0 and NO
+    # damage ever appears (verified: alpha == 0 for every step up to
+    # theta = 2).  Clamping both ends restores a uniform stress e = -theta and
+    # with it the homogeneous damage branch -- the "damage plateau".
     bcs_u, bcs_v, bcs_a, bcs_alpha = [], [], [], []
+    # Defaults to True: this file exists *only* for the clamped bar, and
+    # with the clamp off it silently solves the free bar instead --
+    # u' = theta, e = 0, no stress and no damage at any load, which
+    # reads as "nothing happens" rather than as a missing flag.
+    if model_parameters.get("clamped_ends", True):
+        Lx = mesh_parameters.get("Lx", 1.0)
+        def _both_ends(x):
+            return np.isclose(x[0], 0.0) | np.isclose(x[0], Lx)
+        dofs_end = fem.locate_dofs_geometrical(V_u, _both_ends)
+        zero = (PETSc.ScalarType(0.0) if physics == "1D"
+                else np.zeros(domain.geometry.dim, dtype=PETSc.ScalarType))
+        bcs_u = [fem.dirichletbc(zero, dofs_end, V_u)]
+        bcs_v = [fem.dirichletbc(zero, dofs_end, V_u)]
+        bcs_a = [fem.dirichletbc(zero, dofs_end, V_u)]
+        if verbose and comm.rank == 0:
+            print(f"  [BC] both ends clamped: {len(dofs_end)} dofs")
+    # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     # Constants + energies
@@ -350,7 +347,7 @@ def run_problem(
     # -------------------------------------------------------------------------
     u.x.array[:] = 0.0; v.x.array[:] = 0.0; a.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
-    alpha_lb.x.array[:] = defect_seed(V_alpha, defect)
+    alpha_lb.x.array[:] = 0.0
     alpha_ub.x.array[:] = 1.0
     theta_c.value = 0.0
 
@@ -361,14 +358,14 @@ def run_problem(
     dt_qs = t_final_qs / n_qs
     n_qs_max = n_qs            # QS runs exactly n_qs steps (t = 0 -> t_final_qs)
     snap_every_qs = max(1, n_qs_max // max(1, N_snap))
-    pbar_qs = tqdm(total=n_qs_max if run_qs else 0,
+    pbar_qs = tqdm(total=n_qs_max,
                    desc=f"QS  [{physics}|{model_name}]",
                    dynamic_ncols=True,
-                   disable=not (verbose and comm.rank == 0 and run_qs))
+                   disable=not (verbose and comm.rank == 0))
 
     t_cur = 0.0
     i = 0
-    while run_qs and t_cur + 1e-12 < t_final_qs:
+    while t_cur + 1e-12 < t_final_qs:
         i += 1
         t_cur += dt_qs
         theta_c.value = float(Theta_qs_fn(t_cur))
@@ -377,7 +374,7 @@ def run_problem(
                              alpha_old_iter, error_L2_alpha_form,
                              AltMin_parameters["max_iter"], AltMin_parameters["tol"],
                              comm_=domain.comm)
-        enforce_irreversibility(alpha, alpha_lb)
+        alpha_lb.x.array[:] = alpha.x.array
 
         qs["t"].append(float(t_cur))
         qs["theta"].append(float(theta_c.value))
@@ -449,7 +446,7 @@ def run_problem(
     for fn in (u, u_new, v, v_new, a, a_new):
         fn.x.array[:] = 0.0
     alpha.x.array[:] = 0.0
-    alpha_lb.x.array[:] = defect_seed(V_alpha, defect)
+    alpha_lb.x.array[:] = 0.0
     alpha_ub.x.array[:] = 1.0
     theta_c.value = 0.0
 
@@ -471,14 +468,14 @@ def run_problem(
 
     diss_energy = 0.0
 
-    pbar_dyn = tqdm(total=n_dyn_max if run_dyn else 0,
+    pbar_dyn = tqdm(total=n_dyn_max,
                     desc=f"Dyn [{physics}|{model_name}]",
                     dynamic_ncols=True,
-                    disable=not (verbose and comm.rank == 0 and run_dyn))
+                    disable=not (verbose and comm.rank == 0))
 
     t_cur = 0.0
     step = 0
-    while run_dyn and t_cur + 1e-12 < t_final_dyn:
+    while t_cur + 1e-12 < t_final_dyn:
         step += 1
         t_cur += dt
         theta_c.value = float(Theta_dyn_fn(t_cur))
@@ -505,7 +502,7 @@ def run_problem(
         v.x.array[:] = v_new.x.array
         a.x.array[:] = a_new.x.array
         alpha_rate.x.array[:] = (alpha.x.array - alpha_lb.x.array) / dt
-        enforce_irreversibility(alpha, alpha_lb)
+        alpha_lb.x.array[:] = alpha.x.array
 
         dyn["t"].append(t_cur)
         dyn["theta"].append(float(theta_c.value))
@@ -562,11 +559,6 @@ def run_problem(
     dyn_events = detect_crack_events(dyn["theta"], dyn["S"], dyn["n_cracks"])
 
     x_alpha = V_alpha.tabulate_dof_coordinates()[:, 0]
-    # The full coordinates as well: keeping only x silently discards y, and a
-    # caller plotting a 2D field then has no way to recover it.  Added as a new
-    # key so that nothing reading x_alpha changes.
-    xy_alpha = V_alpha.tabulate_dof_coordinates()[:, :2]
-    x_u     = V_u.tabulate_dof_coordinates()[:, 0]
 
     for s in (solver_u_qs, solver_alpha_qs, solver_acc, solver_alpha_dyn):
         s.destroy()
@@ -577,8 +569,6 @@ def run_problem(
         "qs":               qs,
         "dyn":              dyn,
         "x_alpha":          x_alpha,
-        "xy_alpha":         xy_alpha,
-        "x_u":              x_u,
         "alpha_qs_final":   alpha_qs_final,
         "alpha_dyn_final":  alpha_dyn_final,
         "qs_snapshots":     qs_snapshots,

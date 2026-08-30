@@ -22,6 +22,27 @@ from .imports import (
 # =============================================================================
 # Mesh / DoF reporting
 # =============================================================================
+def defect_seed(V_alpha, defect):
+    """Initial damage bound: zero everywhere, or a small Gaussian imperfection.
+
+    ``defect = (x0, width, alpha0)`` gives ``alpha0 * exp(-((x-x0)/width)^2)``.
+
+    Why it is needed: a homogeneous specimen is translation invariant, so every
+    crack position costs the same energy and the evolution is **non-unique** --
+    the quasi-static and dynamic branches then localise in different places and
+    any comparison of the *fields* is dominated by that mismatch.  (An
+    energy-based comparison is blind to it, because the energy does not change
+    when the crack is translated.)  A tiny imperfection breaks the symmetry and
+    makes the crack site, hence the comparison, well posed.
+    """
+    import numpy as _np
+    xa = V_alpha.tabulate_dof_coordinates()[:, 0]
+    if not defect:
+        return _np.zeros_like(xa)
+    x0, width, a0 = defect
+    return a0 * _np.exp(-((xa - x0) / width) ** 2)
+
+
 def print_mesh_info(domain, V_u, V_alpha, label: str = "", comm_=None):
     """
     Print a one-line summary of the mesh / function-space sizes so the user
@@ -120,7 +141,23 @@ def make_linear_snes(problem, V, factor: str | None = "mumps") -> PETSc.SNES:
 
 
 def make_damage_snes(problem, lb, ub, factor: str | None = "mumps") -> PETSc.SNES:
-    """Bound-constrained SNES (``vinewtonrsls``) used for the damage update."""
+    """Bound-constrained SNES (``vinewtonrsls``) used for the damage update.
+
+    .. note:: **The line search must be disabled.**
+
+       The damage sub-problem is a linear complementarity problem (for AT1 the
+       energy is *quadratic* in ``alpha``), and reduced-space active-set Newton
+       solves it in a handful of iterations -- but only with a full step.  The
+       default backtracking line search fights the active-set changes: it
+       reports ``SNES_DIVERGED_LINE_SEARCH`` (-6) at the load steps where the
+       set of damaging points is moving, and the SNES then returns an iterate
+       that violates its own lower bound.  Since the caller uses the returned
+       field as the next irreversibility bound, one such failure silently
+       destroys irreversibility for the rest of the run -- damage *decreases*,
+       the surface energy jumps around, and mesh convergence is lost.  This was
+       observed at ``mesh_per_lhat >= 8`` before the line search was switched
+       to ``basic``.
+    """
     V = problem.u.function_space
     b  = fem.petsc.create_vector(V)
     Jm = fem.petsc.create_matrix(problem.a)
@@ -128,7 +165,8 @@ def make_damage_snes(problem, lb, ub, factor: str | None = "mumps") -> PETSc.SNE
     snes.setType("vinewtonrsls")
     snes.setFunction(problem.F, b)
     snes.setJacobian(problem.J, Jm)
-    snes.setTolerances(rtol=1.0e-9, max_it=50)
+    snes.setTolerances(rtol=1.0e-9, atol=1.0e-12, max_it=100)
+    snes.getLineSearch().setType("basic")          # see the note above
     snes.getKSP().setType("preonly")
     snes.getKSP().getPC().setType("lu")
     snes.setVariableBounds(lb.x.petsc_vec, ub.x.petsc_vec)
@@ -143,6 +181,21 @@ def make_damage_snes(problem, lb, ub, factor: str | None = "mumps") -> PETSc.SNE
 # =============================================================================
 # Alternate-minimisation outer loop
 # =============================================================================
+def enforce_irreversibility(alpha, alpha_lb):
+    """Raise the irreversibility bound to the new damage: ``lb <- max(lb, alpha)``.
+
+    Irreversibility is *supposed* to be enforced by the bound constraint of the
+    damage solver, and normally it is.  But a bound-constrained Newton solve can
+    fail, and when it does it returns an iterate that need not satisfy its own
+    constraint.  Assigning that iterate straight to the bound (``lb = alpha``)
+    turns one bad step into a permanently broken run, because the bound can then
+    go *down*.  Taking the maximum makes the damaged set monotone by
+    construction, which is the physics, and costs one vectorised pass.
+    """
+    np.maximum(alpha_lb.x.array, alpha.x.array, out=alpha_lb.x.array)
+    np.maximum(alpha.x.array, alpha_lb.x.array, out=alpha.x.array)
+
+
 def alt_min_loop(
     primal_solver, primal_x,
     damage_solver, alpha,

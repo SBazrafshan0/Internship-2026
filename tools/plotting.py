@@ -23,6 +23,7 @@ file -- as requested, it lives outside the core repository.
 """
 
 from __future__ import annotations
+import math
 import os
 from pathlib import Path
 import numpy as np
@@ -644,3 +645,529 @@ def triangulation_from_domain(domain):
     domain.topology.create_connectivity(2, 0)
     cells = domain.topology.connectivity(2, 0).array.reshape(-1, 3)
     return Triangulation(x, y, cells)
+
+
+# =============================================================================
+# problems/eta_convergence.py -- norm-based dynamic -> quasi-static study
+# =============================================================================
+_ETA_LOAD_LABEL = {"mechanical": r"imposed displacement $\hat U$",
+                   "thermal":    r"thermal load $\theta$"}
+
+
+_ETA_NORM_STYLE = {"u_L2": ("tab:blue",   "o", r"$\|u_{dyn}-u_{qs}\|_{L^2}$"),
+          "u_H1": ("tab:cyan",   "s", r"$\|u_{dyn}-u_{qs}\|_{H^1}$"),
+          "a_L2": ("tab:orange", "^", r"$\|\alpha_{dyn}-\alpha_{qs}\|_{L^2}$"),
+          "a_H1": ("tab:red",    "v", r"$\|\alpha_{dyn}-\alpha_{qs}\|_{H^1}$"),
+          "y_H1": ("k",          "D", r"$\|y_{dyn}-y_{qs}\|_{H^1\times H^1}$")}
+
+
+def plot_eta_norm_study(study: dict, output_dir, verbose: bool = True):
+    out_dir = Path(output_dir)
+    physics, etas, grid = study["physics"], study["etas"], study["grid"]
+    label = _ETA_LOAD_LABEL[physics]
+
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(13.5, 5.0))
+
+    # -- left: the state distance along the loading path, one curve per eta ---
+    cmap = plt.cm.viridis(np.linspace(0.12, 0.92, len(etas)))
+    for k, (eta, c) in enumerate(zip(etas, cmap)):
+        axL.plot(grid, study["dist"]["y_H1"][k] / study["scale"]["y_H1"],
+                 color=c, lw=1.7, label=fr"$\eta={eta:g}$")
+    axL.set_xlabel(label)
+    axL.set_ylabel(r"$\|y_{dyn}-y_{qs}\|_{H^1\times H^1}\,/\,\max\|y_{qs}\|$")
+    axL.set_title(f"{physics} ($\\Lambda={study['Lambda']:g}$): state distance "
+                  "along the loading path")
+    axL.set_yscale("log"); axL.grid(alpha=0.3, which="both")
+    axL.legend(fontsize=8, ncol=2)
+
+    axL.axvline(study["load_crack"], color="r", ls="--", lw=1.4)
+    axL.text(study["load_crack"], axL.get_ylim()[1], " crack", color="r",
+             fontsize=9, va="top")
+
+    # -- right: PRE-CRACK convergence -- every norm falls together -----------
+    # A metric that is IDENTICALLY ZERO cannot be drawn on a log axis, and it is
+    # not a failure: with AT1 the damage field is exactly zero in BOTH branches
+    # throughout the elastic phase, so ||alpha_dyn - alpha_qs|| == 0 there.  Say
+    # so in words instead of plotting an invisible line labelled "order nan".
+    vanishing = []
+    for m in study["metrics"]:
+        col, mk, lab = _ETA_NORM_STYLE[m]
+        y = np.asarray(study["pre_sup"][m], float)
+        if not np.any(y > 0):
+            vanishing.append(lab)
+            continue
+        axR.plot(etas, y, marker=mk, color=col,
+                 lw=2.0 if m == "y_H1" else 1.3,
+                 ms=7 if m == "y_H1" else 5,
+                 label=lab + fr"  (order {study['order'][m]:.2f})")
+    if vanishing:
+        axR.text(0.03, 0.03,
+                 "identically zero on the elastic branch\n(AT1: $\\alpha\\equiv0$ in both):\n"
+                 + "\n".join(vanishing),
+                 transform=axR.transAxes, fontsize=8, va="bottom", ha="left",
+                 bbox=dict(fc="white", ec="0.7", alpha=0.9))
+    e = np.array(etas)
+    axR.plot(e, study["pre_sup"]["y_H1"][0] * (e / e[0]), "k:", lw=1.2,
+             label=r"first order in $\eta$")
+    axR.set_xscale("log"); axR.set_yscale("log"); axR.invert_xaxis()
+    axR.set_xlabel(r"loading time-scale $\eta$   (slower loading $\rightarrow$)")
+    axR.set_ylabel("relative distance  (sup over the ELASTIC part of the path)")
+    axR.set_title("Before the crack: clean convergence in every norm\n"
+                  "(equivalent norms $\\Rightarrow$ same order)")
+    axR.grid(alpha=0.3, which="both"); axR.legend(fontsize=8)
+
+    fig.suptitle(r"Dynamic $\rightarrow$ quasi-static limit measured with Sobolev norms "
+                 r"of the state $y=(u,\alpha)$, not with energies", fontsize=12)
+    fig.tight_layout(rect=[0, 0, 1, 0.93])
+    for ext in ("png", "pdf"):
+        f = out_dir / f"eta_norm_{physics}.{ext}"
+        fig.savefig(f, dpi=150, bbox_inches="tight")
+        if verbose:
+            print(f"  saved {f}")
+    save_final_figure(fig, out_dir, f"eta_norm_{physics}", verbose=verbose)
+    plt.show()
+    plt.close(fig)
+
+
+# =============================================================================
+# problems/secondary_wave.py -- direct wave solver with cracking and splitting
+# =============================================================================
+_WAVE_GEN_COLORS = ["#00e5ff", "#7CFC00", "#FFD400", "#FF7A00", "#FF2D55", "#FF00FF"]
+
+
+def _wave_panel_title(r):
+    n, g = r["n_secondary"], r["n_generations"]
+    if n == 0:
+        tag = "no secondary crack"
+    elif g <= 1:
+        tag = f"{n} secondary crack" + ("s" if n > 1 else "")
+    else:
+        tag = f"cascade: {n} cracks, {g} generations"
+    return (fr"$\Lambda$={r['Lambda_bar']:.2f}, $\Gamma$={r['Gamma']:.2f}" "\n" + tag)
+
+
+def plot_wave_spacetime(runs, output_dir, fname="secondary_wave_spacetime",
+                          row_labels=("fixed $\\Lambda$: increasing damping $\\Gamma$",
+                                      "fixed $\\Gamma$: increasing $\\Lambda$ (shorter film)"),
+                          verbose=True):
+    """2x3 space-time maps of ``|e(x,t)|`` with every crack marked.
+
+    ``runs`` is a list of six results: the first three form the top row, the
+    last three the bottom row.  All panels share one colour scale.
+    """
+    out = Path(output_dir); out.mkdir(parents=True, exist_ok=True)
+    vmax = max(np.abs(r["e_xt"]).max() for r in runs)
+
+    fig, axes = plt.subplots(2, 3, figsize=(16.5, 9.5), constrained_layout=True)
+    for ax, r in zip(axes.ravel(), runs):
+        X = r["x_el"] / r["ell_e"]
+        T = r["t_snap"] / r["tau_rt"]
+        pc = ax.pcolormesh(X, T, np.abs(r["e_xt"]).T, shading="auto", cmap="magma",
+                           vmin=0.0, vmax=vmax, rasterized=True)
+        ax.contour(X, T, np.abs(r["e_xt"]).T, levels=[r["e_crit"]],
+                   colors="w", linewidths=0.9, alpha=0.65)
+        # every crack: it exists from its birth time onwards and blocks the wave
+        for cr in r["cracks"]:
+            xg, tg, gg = cr["x"] / r["ell_e"], cr["t"] / r["tau_rt"], cr["gen"]
+            col = _WAVE_GEN_COLORS[min(gg, len(_WAVE_GEN_COLORS) - 1)]
+            ax.plot([xg, xg], [tg, T[-1]], color=col, lw=1.4, ls="--", alpha=0.95)
+            if gg > 0:
+                ax.plot(xg, tg, "o", ms=7, mfc=col, mec="k", mew=0.8, zorder=6)
+        ax.set_xlim(X[0], X[-1]); ax.set_ylim(T[0], T[-1])
+        ax.set_title(_wave_panel_title(r), fontsize=10)
+        ax.set_xlabel(r"$x/\ell_e$")
+    for i, lab in enumerate(row_labels):
+        axes[i, 0].set_ylabel(lab + "\n" + r"$t/\tau_{rt}$ (round-trips)", fontsize=9)
+    fig.colorbar(pc, ax=axes, label=r"$|e(x,t)|$   (one scale for all panels)",
+                 shrink=0.85)
+    fig.suptitle("Release waves with real cracking and domain splitting: each new crack "
+                 "is a new free face that launches its own wave\n"
+                 "(dashed lines = cracks, coloured by generation; markers = birth)",
+                 fontsize=12)
+    paths = []
+    for ext in ("png", "pdf"):
+        p = out / f"{fname}.{ext}"
+        fig.savefig(p, dpi=150, bbox_inches="tight"); paths.append(p)
+    save_final_figure(fig, out, fname, verbose=False)
+    if verbose:
+        print("saved", paths[0], f"| common colour scale 0 .. {vmax:.3f}")
+    return fig
+
+
+def plot_wave_energy(runs, output_dir, fname="secondary_wave_energy",
+                       verbose=True):
+    """2x3 energy histories matching :func:`plot_wave_spacetime`."""
+    out = Path(output_dir); out.mkdir(parents=True, exist_ok=True)
+
+    fig, axes = plt.subplots(2, 3, figsize=(16.5, 8.5), sharex=True,
+                             constrained_layout=True)
+    for ax, r in zip(axes.ravel(), runs):
+        h, T = r["hist"], r["hist"]["t"] / r["tau_rt"]
+        ax.plot(T, h["P_el"], color="tab:blue",   lw=1.8, label=r"elastic $\mathcal{P}_{el}$")
+        ax.plot(T, h["P_f"],  color="tab:green",  lw=1.4, label=r"foundation $\mathcal{P}_f$")
+        ax.plot(T, h["K"],    color="tab:red",    lw=1.4, label=r"kinetic $\mathcal{K}$")
+        ax.plot(T, h["S"],    color="tab:purple", lw=1.4, label=r"fracture $\mathcal{S}$")
+        ax.plot(T, h["D"],    color="tab:orange", lw=1.4, ls="--", label=r"dissipated $\mathcal{D}$")
+        ax.plot(T, h["total"], "k-", lw=2.2, label="total (should be conserved)")
+        for cr in r["cracks"][1:]:
+            ax.axvline(cr["t"] / r["tau_rt"],
+                       color=_WAVE_GEN_COLORS[min(cr["gen"], len(_WAVE_GEN_COLORS) - 1)],
+                       lw=1.0, ls=":", alpha=0.9)
+        ax.set_title(_wave_panel_title(r), fontsize=10)
+        ax.grid(alpha=0.3)
+    for a in axes[1, :]:
+        a.set_xlabel(r"$t/\tau_{rt}$ (round-trips)")
+    for a in axes[:, 0]:
+        a.set_ylabel("energy")
+    axes[0, 2].legend(fontsize=7.5, loc="center right")
+    fig.suptitle("Energy budget in time: every crack converts stored elastic energy into "
+                 "kinetic energy and new surface\n"
+                 "(vertical dotted lines = crack events, coloured by generation)",
+                 fontsize=12)
+    paths = []
+    for ext in ("png", "pdf"):
+        p = out / f"{fname}.{ext}"
+        fig.savefig(p, dpi=150, bbox_inches="tight"); paths.append(p)
+    save_final_figure(fig, out, fname, verbose=False)
+    if verbose:
+        print("saved", paths[0])
+    return fig
+
+
+# =============================================================================
+# Animation: watch the wave travel, cross the threshold, and split the film
+# =============================================================================
+def _wave_broken_mask(res, t_now):
+    """Boolean mask of the elements already cracked at time ``t_now``."""
+    x_el = res["x_el"]
+    broken = np.zeros(x_el.size, bool)
+    for cr in res["cracks"]:
+        if cr["t"] <= t_now and cr["x"] > 0.0:
+            broken[int(np.argmin(np.abs(x_el - cr["x"])))] = True
+    return broken
+
+
+def animate_wave_run(res, output_dir, fname="secondary_wave_movie",
+                     n_frames=170, fps=8, dpi=95, verbose=True, fmt="gif",
+                     figsize=(10.5, 7.4)):
+    """Animate one run: the film strip, the strain profile against ``e_crit``
+    and the energy budget, with the over-threshold region highlighted.
+
+    Three stacked panels, all sharing the same instant:
+
+    1. **the film** -- a strip coloured by ``|e|``; a cracked element is drawn
+       black, so the fragmentation is literally visible as the strip breaking
+       into pieces;
+    2. **the strain profile** ``|e(x)|`` against the threshold ``e_crit``.  The
+       area above the threshold is filled **red** and the peak is marked, so
+       the instant a point goes critical is unmistakable;
+    3. **the energy budget** with a moving time cursor.
+    """
+    import matplotlib as mpl
+    from matplotlib.animation import FuncAnimation, PillowWriter
+    out = Path(output_dir); out.mkdir(parents=True, exist_ok=True)
+
+    x   = res["x_el"] / res["ell_e"]
+    T   = res["t_snap"] / res["tau_rt"]
+    AE  = np.abs(res["e_xt"])
+    ec  = res["e_crit"]
+    idx = np.linspace(0, T.size - 1, min(n_frames, T.size)).astype(int)
+
+    fig = plt.figure(figsize=figsize)
+    gs  = fig.add_gridspec(3, 1, height_ratios=[1.0, 2.6, 2.0], hspace=0.55)
+    ax_bar, ax_pro, ax_en = (fig.add_subplot(gs[i]) for i in range(3))
+
+    # ---- panel 1: the film strip -------------------------------------------
+    cmap = mpl.colormaps["magma"].copy()
+    cmap.set_bad("black")                       # cracked elements go black
+    vmax = max(AE.max(), ec * 1.1)
+    im = ax_bar.imshow(AE[:, 0][None, :], aspect="auto", cmap=cmap,
+                       vmin=0.0, vmax=vmax,
+                       extent=[x[0], x[-1], 0, 1], interpolation="nearest")
+    ax_bar.set_yticks([]); ax_bar.set_xlim(x[0], x[-1])
+    ax_bar.set_xlabel(r"$x/\ell_e$", fontsize=8, labelpad=1)
+    bar_marks = []
+    ax_bar.set_title("the film  (colour = $|e|$, black = crack)", fontsize=10)
+    cb = fig.colorbar(im, ax=ax_bar, pad=0.01, fraction=0.05)
+    cb.ax.set_title(r"$|e|$", fontsize=8, pad=4)
+
+    # ---- panel 2: the strain profile vs the threshold ----------------------
+    (ln,) = ax_pro.plot(x, AE[:, 0], color="tab:blue", lw=2.0, zorder=3)
+    ax_pro.axhline(ec, color="red", ls="--", lw=1.8, zorder=2,
+                   label=fr"threshold $e_{{crit}}={ec:g}$")
+    ax_pro.axhline(res["theta"], color="grey", ls=":", lw=1.2, zorder=2,
+                   label=r"pre-stress $\theta$")
+    fill = [ax_pro.fill_between(x, ec, AE[:, 0], where=AE[:, 0] >= ec,
+                                color="red", alpha=0.55, zorder=1)]
+    (pk,) = ax_pro.plot([], [], "o", ms=11, mfc="yellow", mec="k", mew=1.2, zorder=5)
+    crack_lines = []
+    ax_pro.set_xlim(x[0], x[-1]); ax_pro.set_ylim(0, vmax * 1.08)
+    ax_pro.set_xlabel(r"$x/\ell_e$"); ax_pro.set_ylabel(r"$|e(x,t)|$")
+    ax_pro.grid(alpha=0.3); ax_pro.legend(fontsize=8, loc="upper left")
+    banner = ax_pro.text(0.5, 0.93, "", transform=ax_pro.transAxes, ha="center",
+                         va="top", fontsize=13, fontweight="bold", color="red",
+                         zorder=6)
+
+    # ---- panel 3: the energy budget ----------------------------------------
+    h, tE = res["hist"], res["hist"]["t"] / res["tau_rt"]
+    for key, col, lab in (("P_el", "tab:blue", r"elastic $\mathcal{P}_{el}$"),
+                          ("P_f", "tab:green", r"foundation $\mathcal{P}_f$"),
+                          ("K", "tab:red", r"kinetic $\mathcal{K}$"),
+                          ("D", "tab:orange", r"dissipated $\mathcal{D}$"),
+                          ("total", "k", "total")):
+        ax_en.plot(tE, h[key], color=col, lw=2.0 if key == "total" else 1.4,
+                   ls="--" if key == "D" else "-", label=lab)
+    cursor = ax_en.axvline(0.0, color="k", lw=1.6)
+    for cr in res["cracks"][1:]:
+        ax_en.axvline(cr["t"] / res["tau_rt"],
+                      color=_WAVE_GEN_COLORS[min(cr["gen"], len(_WAVE_GEN_COLORS) - 1)],
+                      lw=1.0, ls=":", alpha=0.9)
+    ax_en.set_xlim(tE[0], tE[-1]); ax_en.set_xlabel(r"$t/\tau_{rt}$ (round-trips)")
+    ax_en.set_ylabel("energy"); ax_en.grid(alpha=0.3)
+    ax_en.legend(fontsize=7.5, ncol=5, loc="upper center")
+
+    fig.suptitle(fr"$\Lambda$={res['Lambda_bar']:.2f}, $\Gamma$={res['Gamma']:.2f}"
+                 fr"  --  release wave, threshold crossing and fragmentation",
+                 fontsize=12)
+
+    def update(k):
+        j = idx[k]
+        t_now, e_now = T[j], AE[:, j]
+
+        # panel 1: strip, with cracked elements masked out
+        arr = np.ma.masked_where(_wave_broken_mask(res, res["t_snap"][j]), e_now)
+        im.set_array(arr[None, :])
+
+        # panel 2: profile + over-threshold fill
+        ln.set_ydata(e_now)
+        fill[0].remove()
+        fill[0] = ax_pro.fill_between(x, ec, e_now, where=e_now >= ec,
+                                      color="red", alpha=0.55, zorder=1)
+        i_max = int(np.argmax(e_now))
+        over = e_now[i_max] >= ec
+        pk.set_data([x[i_max]], [e_now[i_max]])
+        pk.set_markerfacecolor("red" if over else "yellow")
+        banner.set_text("CRITICAL  --  a crack is nucleating here" if over else "")
+
+        # cracks already born: show them on BOTH the strip and the profile
+        for ln_ in crack_lines + bar_marks:
+            ln_.remove()
+        crack_lines.clear(); bar_marks.clear()
+        for cr in res["cracks"]:
+            if cr["t"] <= res["t_snap"][j]:
+                col = _WAVE_GEN_COLORS[min(cr["gen"], len(_WAVE_GEN_COLORS) - 1)]
+                crack_lines.append(
+                    ax_pro.axvline(cr["x"] / res["ell_e"], color=col, ls="--",
+                                   lw=1.6, alpha=0.95, zorder=4))
+                bar_marks.append(
+                    ax_bar.axvline(cr["x"] / res["ell_e"], color=col, lw=2.4,
+                                   alpha=1.0, zorder=5))
+        n_now = sum(1 for cr in res["cracks"] if cr["t"] <= res["t_snap"][j]) - 1
+        ax_bar.set_title(f"the film  (colour = $|e|$, black = crack)   --   "
+                         f"t = {t_now:.2f} $\\tau_{{rt}}$,   secondary cracks: {n_now}",
+                         fontsize=10)
+        cursor.set_xdata([t_now, t_now])
+        return ()
+
+    anim = FuncAnimation(fig, update, frames=len(idx), blit=False)
+    if fmt == "mp4":
+        # h264 so the talk can *pause* mid-cascade; a GIF cannot be stopped.
+        from matplotlib.animation import FFMpegWriter
+        try:
+            import imageio_ffmpeg
+            mpl.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            pass
+        path = out / f"{fname}.mp4"
+        anim.save(path, writer=FFMpegWriter(
+            fps=fps, bitrate=-1,
+            extra_args=["-pix_fmt", "yuv420p", "-crf", "18",
+                        "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2"]), dpi=dpi)
+    else:
+        path = out / f"{fname}.gif"
+        anim.save(path, writer=PillowWriter(fps=fps), dpi=dpi)
+    plt.close(fig)
+    if verbose:
+        import os
+        print(f"saved {path}  ({os.path.getsize(path)/1e6:.1f} MB, "
+              f"{len(idx)} frames @ {fps} fps)")
+    return path
+
+
+# =============================================================================
+# Publication-ready figures: one consistent style, vector PDF + raster PNG
+# =============================================================================
+FINAL_FIGS = "final_figs"   # sub-directory of output/, safe to point LaTeX at
+
+
+def figure_paths(output_dir, stem: str) -> dict:
+    """Where a publication-ready figure is written: ``output/final_figs/<stem>.*``."""
+    d = Path(output_dir) / FINAL_FIGS
+    d.mkdir(parents=True, exist_ok=True)
+    return {"png": d / f"{stem}.png", "pdf": d / f"{stem}.pdf"}
+
+
+def save_final_figure(fig, output_dir, stem: str, verbose: bool = True):
+    """Save a figure in both formats, at publication quality.
+
+    PDF is vector (what LaTeX should ``\\includegraphics``), PNG is a 200-dpi
+    raster for quick viewing.  Both go to ``output/final_figs/`` so a
+    document can point at one stable directory.
+    """
+    p = figure_paths(output_dir, stem)
+    fig.savefig(p["pdf"], bbox_inches="tight")             # vector
+    fig.savefig(p["png"], dpi=200, bbox_inches="tight")    # raster
+    if verbose:
+        print(f"  figure -> {p['pdf'].parent}/{stem}.{{pdf,png}}")
+    return p
+
+
+def plot_model_comparison(output_dir, l_hats=(0.01, 0.02, 0.05, 0.1),
+                          verbose: bool = True):
+    """The two phase-field variants side by side -- a standard comparison figure.
+
+    Four panels:
+
+    1. the dissipation ``w(alpha)``: linear (AT1) vs quadratic (AT2).  The
+       *slope at the origin* is what decides whether an elastic phase exists;
+    2. the degradation ``g(alpha) = (1-alpha)^2``, shared by both variants;
+    3. the homogeneous 1-D response ``sigma(e)``: AT1 stays exactly linear up
+       to ``e_crit`` and then softens, AT2 leaves the elastic line immediately;
+    4. the nucleation threshold ``e_crit`` against the regularisation length,
+       in the two normalisations that coexist in this repository.
+    """
+    from .solvers import MODELS, critical_strain, _g
+
+    a = np.linspace(0.0, 1.0, 400)
+    fig, ax = plt.subplots(1, 4, figsize=(17, 3.9))
+
+    for name, col in (("AT1", "tab:blue"), ("AT2", "tab:red")):
+        w = MODELS[name]["w"]
+        ax[0].plot(a, [float(w(x)) for x in a], color=col, lw=2, label=name)
+    ax[0].set_xlabel(r"$\alpha$"); ax[0].set_ylabel(r"$w(\alpha)$")
+    ax[0].set_title("dissipation $w(\\alpha)$\n"
+                    "$w'(0)>0$ (AT1) $\\Rightarrow$ elastic phase", fontsize=10)
+    ax[0].legend(fontsize=9); ax[0].grid(alpha=0.3)
+
+    ax[1].plot(a, [_g(x) for x in a], "k", lw=2)
+    ax[1].set_xlabel(r"$\alpha$"); ax[1].set_ylabel(r"$g(\alpha)$")
+    ax[1].set_title(r"degradation $g(\alpha)=(1-\alpha)^2$" "\n(shared by both)",
+                    fontsize=10)
+    ax[1].grid(alpha=0.3)
+
+    # homogeneous response: minimise 0.5 g(a) e^2 + w(a)/c_w over a >= 0
+    e = np.linspace(0.0, 3.0, 600)
+    for name, col in (("AT1", "tab:blue"), ("AT2", "tab:red")):
+        cw = MODELS[name]["c_w"]
+        sig = []
+        for ee in e:
+            grid = np.linspace(0.0, 1.0, 2001)
+            psi = 0.5 * (1 - grid) ** 2 * ee ** 2 + (
+                grid if name == "AT1" else grid ** 2) / cw
+            ah = grid[int(np.argmin(psi))]
+            sig.append((1 - ah) ** 2 * ee)
+        ax[2].plot(e, sig, color=col, lw=2, label=name)
+        ax[2].axvline(math.sqrt(1.0 / cw) if name == "AT1" else 0.0,
+                      color=col, ls=":", lw=1.2)
+    ax[2].plot(e, e, "k--", lw=1, alpha=0.5, label="undamaged $\\sigma=Ee$")
+    ax[2].set_xlim(0, 2.0); ax[2].set_ylim(0, 1.0)
+    ax[2].set_xlabel(r"strain $e$"); ax[2].set_ylabel(r"stress $\sigma$")
+    ax[2].set_title("homogeneous response\n(dotted: elastic limit)", fontsize=10)
+    ax[2].legend(fontsize=8); ax[2].grid(alpha=0.3)
+
+    ld = np.geomspace(min(l_hats) / 2, max(l_hats) * 2, 200)
+    ax[3].loglog(ld, [critical_strain("AT1", ell_d=x) for x in ld],
+                 color="tab:blue", lw=2,
+                 label=r"note: $e_c=\sqrt{G_c/(E\ell_d)}$")
+    ax[3].axhline(math.sqrt(1.0 / MODELS["AT1"]["c_w"]), color="tab:green",
+                  lw=2, label=r"FEM: $e_c=\sqrt{w'(0)/(c_w E)}$")
+    ax[3].set_xlabel(r"$\ell_d$ (or $\hat\ell$)"); ax[3].set_ylabel(r"$e_{crit}$")
+    ax[3].set_title("AT1 threshold: the two normalisations\n"
+                    "(ratio $\\sqrt{8/3}=1.63$)", fontsize=10)
+    ax[3].legend(fontsize=8); ax[3].grid(alpha=0.3, which="both")
+
+    fig.suptitle("Phase-field variants used in this work: AT1 has a genuine elastic phase, AT2 does not",
+                 fontsize=12)
+    fig.tight_layout(rect=[0, 0, 1, 0.90])
+    save_final_figure(fig, output_dir, "model_AT1_vs_AT2", verbose=verbose)
+    return fig
+
+
+def adopt_final_figure(png_src, pdf_src, output_dir, stem: str,
+                        verbose: bool = True):
+    """Copy an already-saved run figure into ``output/final_figs/``.
+
+    The per-run figures (``plot_mechanical_run`` / ``plot_thermal_run``) carry
+    the whole parameter set in their file name, which is what stops a sweep
+    overwriting itself but is useless in a document.  This gives one of them
+    a short, stable name in the final directory without redrawing it.
+    """
+    import shutil
+    p = figure_paths(output_dir, stem)
+    for src, dst in ((pdf_src, p["pdf"]), (png_src, p["png"])):
+        if src and Path(src).exists():
+            shutil.copyfile(src, dst)
+    if verbose:
+        print(f"  figure -> {p['pdf'].parent}/{stem}.{{pdf,png}}")
+    return p
+
+
+def plot_eta_energy_study(study: dict, output_dir, verbose: bool = True):
+    """The **energy-based** eta study -- the first attempt, and why it fails.
+
+    Three panels, arranged so the two defects of the comparison are visible
+    rather than argued:
+
+    1. the family of total-energy curves, dynamic against quasi-static;
+    2. the resulting "gap" against ``eta`` -- it falls and then **flattens onto
+       a floor**, and is not even monotone;
+    3. the cumulative viscous dissipation the dynamic total leaves out, which
+       is the same size as the floor: the comparison is asymmetric, because the
+       quasi-static branch has no dissipation channel at all.
+    """
+    out_dir = Path(output_dir)
+    etas, grid = study["etas"], study["load_grid"]
+    label = _ETA_LOAD_LABEL[study["physics"]]
+
+    fig, (a1, a2, a3) = plt.subplots(1, 3, figsize=(17, 4.4))
+
+    cmap = plt.cm.viridis(np.linspace(0.12, 0.92, len(etas)))
+    a1.plot(grid, study["E_qs"], "k-", lw=3, label="quasi-static (reference)")
+    for eta, Ed, c in zip(etas, study["E_dyn"], cmap):
+        a1.plot(grid, Ed, "-", color=c, lw=1.5, label=fr"dyn $\eta={eta:g}$")
+    a1.set_xlabel(label)
+    a1.set_ylabel(r"total energy $\mathcal{K}+\mathcal{P}_{el}+\mathcal{P}_f+\mathcal{S}$")
+    a1.set_title(f"{study['physics']} ($\\Lambda={study['Lambda']:g}$): "
+                 "the two energy branches")
+    a1.legend(fontsize=7, ncol=2); a1.grid(alpha=0.3)
+
+    a2.plot(etas, study["gaps"], "o-", color="tab:red", lw=2, ms=7)
+    floor = float(np.min(study["gaps"]))
+    a2.axhline(floor, color="grey", ls=":", lw=1.2, label=f"floor $\\approx${floor:.2e}")
+    a2.set_xscale("log"); a2.set_yscale("log"); a2.invert_xaxis()
+    a2.set_xlabel(r"loading time-scale $\eta$   (slower loading $\rightarrow$)")
+    a2.set_ylabel(r"$\|E_{dyn}-E_{qs}\|/\max|E_{qs}|$")
+    a2.set_title("the gap falls, then stalls on a floor\n(and is not even monotone)")
+    a2.legend(fontsize=9); a2.grid(alpha=0.3, which="both")
+
+    a3.plot(etas, study["D_end"] / study["norm"], "s-", color="tab:orange", lw=2, ms=7,
+            label=r"$\mathcal{D}$ at the end of the run")
+    a3.plot(etas, study["gaps"], "o--", color="tab:red", lw=1.2, ms=5, alpha=0.7,
+            label="the gap, for scale")
+    a3.set_xscale("log"); a3.set_yscale("log"); a3.invert_xaxis()
+    a3.set_xlabel(r"loading time-scale $\eta$")
+    a3.set_ylabel(r"normalised by $\max|E_{qs}|$")
+    a3.set_title("what the comparison LEAVES OUT:\nthe dissipation, absent from the QS branch")
+    a3.legend(fontsize=9); a3.grid(alpha=0.3, which="both")
+
+    fig.suptitle("Comparing TOTAL ENERGIES: the natural first attempt, and why it does not "
+                 "measure how close the two solutions are", fontsize=12)
+    fig.tight_layout(rect=[0, 0, 1, 0.92])
+    for ext in ("png", "pdf"):
+        f = out_dir / f"eta_energy_{study['physics']}.{ext}"
+        fig.savefig(f, dpi=150, bbox_inches="tight")
+        if verbose:
+            print(f"  saved {f}")
+    save_final_figure(fig, out_dir, f"eta_energy_{study['physics']}", verbose=verbose)
+    plt.show()
+    return fig

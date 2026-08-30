@@ -1,8 +1,58 @@
-**.xdmf
-**.h5
-**.png
-**.pdf
+# ---------------------------------------------------------------------------
+# Not part of the code release
+# ---------------------------------------------------------------------------
+# The written work and its sources live here but are not published with the
+# code.  `Articles/` holds the cited papers as PDFs: they are copyrighted by
+# their publishers and must not be redistributed from this repository.
 Articles/
-output/
 report/
+presentation/
+review/
+studies/
+
+# The seven modules below exist only to typeset the written report -- they
+# draw its figures, crop figures out of the papers in `Articles/`, and know
+# its chapter structure.  Nothing in `problems/` or the rest of `tools/`
+# imports them.
+tools/report_figures.py
+tools/theory_figures.py
+tools/theory_schematics.py
+tools/theory_grid_numbers.py
+tools/figures_ladder.py
+tools/extract_paper_figures.py
+tools/extract_final_figures.py
+
+# ---------------------------------------------------------------------------
+# Generated output
+# ---------------------------------------------------------------------------
+output/
+compare-lhat/
+*.xdmf
+*.h5
+*.vtu
+*.pvd
+*.msh
+*.npz
+*.mp4
+*.gif
+
+# Figures are generated, so they are not tracked -- except the two schematic
+# panels `tools/animations.py` needs to draw its 2D specimen, which have no
+# generator in this repository.
+*.png
+*.pdf
+!tools/assets/*.png
+
+# ---------------------------------------------------------------------------
+# Environments, editors, caches
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
 .claude/
+.DS_Store
+
+# WSL writes one of these next to every file copied in from Windows.
+*:Zone.Identifier

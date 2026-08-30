@@ -46,7 +46,13 @@ from dolfinx.mesh import CellType, DiagonalType
 
 try:
     import gmsh
-    from dolfinx.io import gmshio
+    # DOLFINx renamed this module at 0.10: dolfinx.io.gmshio -> dolfinx.io.gmsh.
+    # Testing only the old name silently sent every 2D run to the structured
+    # fallback on any recent build, which is not what the caller asked for.
+    try:
+        from dolfinx.io import gmshio
+    except ImportError:
+        from dolfinx.io import gmsh as gmshio
     HAVE_GMSH = True
 except Exception:                                       # pragma: no cover
     HAVE_GMSH = False
@@ -141,9 +147,13 @@ def _create_2d_gmsh(mesh_parameters, model_parameters, comm, shape: str):
         gmsh.option.setNumber("Mesh.CharacteristicLengthMin", 0.5 * lc)
         gmsh.option.setNumber("Mesh.CharacteristicLengthMax", 1.5 * lc)
         gmsh.model.mesh.generate(2)
-        domain, _cell_tags, facet_tags = gmshio.model_to_mesh(
-            gmsh.model, comm, 0, gdim=2
-        )
+        out = gmshio.model_to_mesh(gmsh.model, comm, 0, gdim=2)
+        # DOLFINx 0.10 returns a MeshData object; older versions returned the
+        # triple (mesh, cell_tags, facet_tags).  Accept both.
+        if hasattr(out, "mesh"):
+            domain, facet_tags = out.mesh, out.facet_tags
+        else:
+            domain, _cell_tags, facet_tags = out
     finally:
         gmsh.finalize()
     return domain, facet_tags
